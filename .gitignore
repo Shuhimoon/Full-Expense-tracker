@@ -1,0 +1,8 @@
+web/node_modules/
+web/tsconfig.tsbuildinfo
+.env
+.env.*
+*.log
+.DS_Store
+.idea/
+.vscode/
