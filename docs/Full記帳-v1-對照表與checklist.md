@@ -1,0 +1,132 @@
+# Full 記帳 v1｜當前計劃對照表 + Build Checklist
+
+基準日：2026-09-07  
+畫布：https://doop.design/c/jr-EE9CpoR  
+程式：`/workspace/full-jizhang` → GitHub `Shuhimoon/Full-Expense-tracker`  
+用途：之後從 GitHub 拉取做 Grok build 對照。
+
+---
+
+## 0. 文件所有權與驗收（強制）
+
+- **唯二可改動本檔**：Shuhi（GitHub `Shuhimoon`）與產品經理 **灰原哀（Haibara Ai）**。
+- 其他代理人（柯南調度除外之實作／設計）**不得**自行改對照表勾選狀態或刪改項目。
+- **完成項目流程**：實作者／設計師完成後，向 **灰原哀** 提驗收 → 她檢查「是否完成、有無遺漏」→ 由其（或 Shuhi）更新本檔勾選。
+- GitHub：`docs/Full記帳-v1-對照表與checklist.md`；CODEOWNERS 鎖定此路徑需 Shuhi review。
+
+
+狀態欄說明：
+- **設計**：Doop 有對應 frame＝設計好；否則空白／未做
+- **API**：後端已有路由＝已有 API
+- **程式 UI**：現有 web 頁大致能跑＝可 build（可能還要對新 IA／Doop）
+- **整體**：給 build 一眼用的綜合判斷
+
+---
+
+## 1. 對照表（規格 ↔ Doop ↔ 實作）
+
+| # | v1 規格項目 | Doop frame | 設計 | API | 程式 UI | 整體 | 備註 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | 註冊／登入（email＋密碼） | `Y5Bm0qKqks` | 設計好 | 已有 | 可 build（`Auth.tsx`） | 可對 build | session cookie；未登入 401 |
+| 2 | 底欄四項：帳本／分析圖／資產／設定＋FAB 記一筆 | 首頁等 frame 底欄 | 設計好 | — | **未對齊**（仍五欄：首頁／記一筆／帳戶／投資／設定） | build 須改 nav | 主色 `#8FB09F` |
+| 3 | 帳本＝首頁：今天已花、淨資產、月曆 | `1vMhY6OCSe` | 設計好 | 已有 summary／daily | 可 build（`Home.tsx` 有月曆／今天已花） | 半成品 | |
+| 4 | 首頁：**逐筆記一筆流水** | `1vMhY6OCSe`（今天流水） | 設計好 | 已有 entries／trades | **未做**（首頁無逐筆列表；有 DayLedger） | build 必補 | Shuhi 2026-09-04 定 |
+| 5 | 首頁：**不要**本月支出圖（圖歸分析） | 首頁無圖／分析有圖 | 設計好 | 已有 stats | **未對齊**（`Home.tsx` 仍嵌 recharts） | build 須搬圖 | |
+| 6 | 分析圖：摺線（支出／收入／現金淨資產）＋分類圓餅 | `iH20573wrb` | 設計好 | 已有 | **無獨立頁**（圖還在首頁） | build 須新建／搬移 | |
+| 7 | 資產：帳戶列表＋持倉列表 | `HDLHZYbQ_r` | 設計好 | 已有 accounts／positions | **拆兩頁**（`Accounts`＋`Invest`） | build 須合併或對齊路由 | |
+| 8 | 設定：帳本 CRUD／開帳入口／分類／備份／登出 | `0N9oT5Ax2q` | 設計好 | 已有 | 可 build（`Settings.tsx`） | 可對 build | 視覺對 Doop |
+| 9 | 記一筆彈層（支出示意） | `q273gYu-Cj`（另有舊 `HngcMO3aMK`） | 設計好 | 已有 entries | 可 build 但**全頁** `/record` | build 改彈層 | FAB 進彈層 |
+| 10 | 記一筆四類型：支出／收入／轉帳／成交 | （彈層同層切；類型差毛利蘭排程） | 部分 | 已有 | 可 build（`Record.tsx` 四 tab） | API＋舊 UI 可 build；視覺跟彈層 | 成交含買賣／轉倉／空投 |
+| 11 | 開帳流程（日→餘額→現倉→鎖定） | `rZ0KEpCTCs`→`shTyYPkl4-`→`Bkl20hKz5B`→`5Wjm9YUjPA` | 設計好 | 已有 opening | 可 build（`Opening.tsx`） | 可對 build | 每本獨立 |
+| 12 | 帳本切換（多本） | 頂欄／設定（獨立頁可延後） | 部分（設定內） | 已有 select | 可 build（`BookBar`＋設定） | 可 build | **獨立切換頁延後** |
+| 13 | 日曆點進當日流水 | — | 可延後設計 | 已有 | 可 build（`DayLedger.tsx`） | 可延後視覺 | |
+| 14 | 帳戶明細 | — | 可併資產 | 已有 | 可 build（`AccountDetail`） | 可 build | |
+| 15 | 持倉單檔（成本／現值／損益／成交） | — | **可延後** | 已有 | 可 build（`PositionDetail`） | **可延後對 Doop**；API／舊頁在 | |
+| 16 | 報價刷新／手改現價 | — | 手改 UI 可延後 | 已有 quotes／fx | 部分（下拉刷新） | 手改畫面延後 | |
+| 17 | 備份匯出／還原（當前帳本 JSON） | 設定內 | 設計好（設定） | 已有 | 可 build | 可 build | 非 CSV 開帳 |
+| 18 | PWA 可安裝、Postgres 正本、Go API | — | — | 架構已定 | 專案骨架在 | build 環境 | Go chi／pgx／React Vite |
+
+---
+
+## 2. Build Checklist（給 Grok／實作者勾）
+
+### A. 環境與架構
+- [ ] Clone `Shuhimoon/Full-Expense-tracker`（或 `/workspace/full-jizhang`）
+- [ ] Postgres 16 起來，`golang-migrate` 跑過
+- [ ] API：Go 1.22+／chi／pgx 可 `GET /api/health`
+- [ ] Web：React Vite PWA 可開；只經 API
+- [ ] 主色 `#8FB09F`；底欄對齊 Doop（帳本／分析圖／資產／設定＋FAB）
+
+### B. 帳號
+- [ ] 註冊 email＋密碼（argon2id）
+- [ ] 登入／登出 session cookie
+- [ ] 未登入擋開帳／記帳／圖表／日曆
+
+### C. 帳本
+- [ ] 多本：新增／改名／封存／取消封存；有資料不可刪
+- [ ] `last_book_id` 切換；業務 API 帶 `book_id` 且核對所有權
+- [ ] 頂欄顯示當前帳本名（獨立切換頁**不要求**本輪）
+
+### D. 開帳（對 Doop 四步）
+- [ ] 開帳日
+- [ ] 各帳戶現金／信用卡欠款
+- [ ] 現倉（數量＋總成本 TWD；成本未填標示）
+- [ ] 預覽→鎖定；鎖定後不可改開帳日／快照
+- [ ] 開帳日前不可記
+
+### E. 記一筆（彈層＋四類型）
+- [ ] FAB → 底部彈層（不要當底欄一級）
+- [ ] 支出／收入／轉帳／成交同層切換
+- [ ] 成交：買／賣／轉倉／空投；現金股利走收入分類「股利」
+- [ ] 存檔打 API；冪等 `Idempotency-Key`
+
+### F. 帳本首頁（對 `1vMhY6OCSe`）
+- [ ] 今天已花
+- [ ] 淨資產／相對開帳／持倉摘要
+- [ ] 月曆（格上支出；開帳日前淡、不可記）
+- [ ] **逐筆流水列表**（今天或最近；**必做**）
+- [ ] **首頁無**本月支出摺線／圓餅
+
+### G. 分析圖（對 `iH20573wrb`）
+- [ ] 獨立「分析圖」頁（從首頁搬走）
+- [ ] 摺線：支出／收入／現金淨資產（不含持倉）
+- [ ] 圓餅：本月支出分類；圖例在下
+
+### H. 資產（對 `HDLHZYbQ_r`）
+- [ ] 帳戶列表（五類）＋餘額
+- [ ] 持倉列表（現值／未實現）
+- [ ] 帳戶明細可進（有舊頁可接）
+- [ ] 持倉單檔：**本輪可延後**對 Doop（舊 `PositionDetail` 可暫留）
+
+### I. 設定（對 `0N9oT5Ax2q`）
+- [ ] 帳本管理、開帳入口、分類、備份匯出／還原、改密碼／登出
+
+### J. 資料規則（驗收）
+- [ ] 成本：帳戶×標的移動平均
+- [ ] 基準 TWD；USDT／USD 當持倉
+- [ ] 統計 SQL 聚合 Entry，不另建統計表
+- [ ] JSON 備份≠資料庫≠開帳輸入；不做 CSV 全量匯入
+
+---
+
+## 3. 可延後（本輪 build 不擋）
+
+- 持倉單檔完整對 Doop（成本／現值／損益／成交精修）
+- 帳本切換**獨立頁**（頂欄列表／設定內切換即可）
+- 日曆點進當日流水的視覺精修（功能舊頁已有）
+- 手改現價畫面、載入／錯誤／過場動畫
+- 備份還原 UI 精修、已平倉展開、現金股利從持倉快捷入口
+- 舊五欄 IA 文檔全文改寫（先跟畫／跟 build）
+
+---
+
+## 4. Build 建議順序（對齊現況）
+
+1. 改底欄 IA＋FAB 彈層  
+2. 首頁：加逐筆流水、撤走圖表  
+3. 新建分析圖頁（接既有 stats API）  
+4. 資產頁合併帳戶＋持倉列表  
+5. 對齊開帳／設定／登入視覺  
+6. 其餘延後項有空再補  
+
+程式側多數 **API 已齊**；缺口主要是 **UI 對新 Doop／新底欄**，不是從零寫後端。
