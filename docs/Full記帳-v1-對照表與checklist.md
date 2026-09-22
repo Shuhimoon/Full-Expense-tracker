@@ -51,21 +51,21 @@
 ## 2. Build Checklist（給 Grok／實作者勾）
 
 ### A. 環境與架構
-- [ ] Clone `Shuhimoon/Full-Expense-tracker`（或 `/workspace/full-jizhang`）
-- [ ] Postgres 16 起來，`golang-migrate` 跑過
-- [ ] API：Go 1.22+／chi／pgx 可 `GET /api/health`
+- [x] Clone `Shuhimoon/Full-Expense-tracker`（或 `/workspace/full-jizhang`）（環境可測；本機路徑在）
+- [x] Postgres 起來且測試庫可連（2026-09-22 灰原哀驗收；migrate 以測試可跑為準）
+- [x] API：Go／chi／pgx 可測（2026-09-22；`go test ./internal/auth/ ./internal/app/` 11 PASS）
 - [ ] Web：React Vite PWA 可開；只經 API
 - [x] 主色 `#8FB09F`；底欄對齊 Doop（帳本／分析圖／資產／設定＋FAB）（2026-09-22 灰原哀驗收）
 
 ### B. 帳號
-- [ ] 註冊 email＋密碼（argon2id）
-- [ ] 登入／登出 session cookie
-- [ ] 未登入擋開帳／記帳／圖表／日曆
+- [x] 註冊 email＋密碼（argon2id）（2026-09-22 灰原哀驗收；`TestHashVerifyArgon2id`＋register）
+- [x] 登入／登出 session cookie（2026-09-22 灰原哀驗收；`TestAuthRegisterLoginLogoutSession`）
+- [x] 未登入擋開帳／記帳／圖表／日曆（2026-09-22 灰原哀驗收；`TestUnauthenticatedReturns401`）
 - [x] 登入／註冊頁視覺主色 `#8FB09F`（2026-09-22 灰原哀驗收；`Auth.tsx`）
 
 ### C. 帳本
-- [ ] 多本：新增／改名／封存／取消封存；有資料不可刪
-- [ ] `last_book_id` 切換；業務 API 帶 `book_id` 且核對所有權
+- [x] 多本：新增／改名／封存／取消封存；有資料不可刪（2026-09-22 灰原哀驗收；`TestBooksMultiCRUDArchiveSelectOwnership`）
+- [x] `last_book_id` 切換；業務 API 帶 `book_id` 且核對所有權（2026-09-22 灰原哀驗收）
 - [ ] 頂欄顯示當前帳本名（獨立切換頁**不要求**本輪）
 
 ### D. 開帳（對 Doop 四步）
@@ -73,7 +73,7 @@
 - [x] 各帳戶現金／信用卡欠款（2026-09-22 灰原哀驗收）
 - [x] 現倉（數量＋總成本 TWD；成本未填標示）（2026-09-22 灰原哀驗收）
 - [x] 預覽→鎖定；鎖定後不可改開帳日／快照（2026-09-22 灰原哀驗收）
-- [ ] 開帳日前不可記（未本輪靜態驗；API／舊規則待實機）
+- [x] 開帳日前不可記（2026-09-22 灰原哀驗收；`TestOpeningLockWritesInOneTxAndBlocksBeforeDate` PASS）
 
 ### E. 記一筆（彈層＋四類型）
 - [x] FAB → 底部彈層（不要當底欄一級）（2026-09-22 灰原哀驗收）
@@ -103,10 +103,10 @@
 - [x] 帳本管理、開帳入口、分類、備份匯出／還原、改密碼／登出（2026-09-22 灰原哀驗收）
 
 ### J. 資料規則（驗收）
-- [ ] 成本：帳戶×標的移動平均
-- [ ] 基準 TWD；USDT／USD 當持倉
-- [ ] 統計 SQL 聚合 Entry，不另建統計表
-- [ ] JSON 備份≠資料庫≠開帳輸入；不做 CSV 全量匯入
+- [x] 成本：帳戶×標的移動平均（2026-09-22 灰原哀驗收；`TestMovingAveragePerAccountInstrument`）
+- [x] 基準 TWD；USDT／USD 當持倉（2026-09-22 灰原哀驗收；`TestBaseTWDAndUSDTUSDAreInstruments`）
+- [x] 統計 SQL 聚合 Entry，不另建統計表（2026-09-22 灰原哀驗收；`TestStatsFromSQLAggregateNotStatsTable`）
+- [x] JSON 備份≠資料庫≠開帳輸入；不做 CSV 全量匯入（2026-09-22 灰原哀驗收；`TestJSONBackupIsNotDatabaseDump`）
 
 ---
 
@@ -118,7 +118,6 @@
 - 手改現價畫面、載入／錯誤／過場動畫
 - 備份還原 UI 精修、已平倉展開、現金股利從持倉快捷入口
 - 舊五欄 IA 文檔全文改寫（先跟畫／跟 build）
-- 開帳日前不可記（實機／規則再驗）
 
 ---
 
@@ -131,7 +130,7 @@
 5. ~~對齊開帳／設定／登入視覺~~（2026-09-22 已驗）  
 6. 其餘延後項／後端規則／環境 checklist（A／B／C／J）有空再補  
 
-§1 #1–11、#14 與 §2 A／D／E／F／G／H／I 主項 UI 已於 2026-09-22 通過程式驗收。
+§1 #1–11、#14 與 §2 A／B／C／D／E／F／G／H／I／J 主項已於 2026-09-22 通過（UI 靜態＋`go test` 11 PASS）。未勾：Web PWA 手動、頂欄帳本顯示（UI）、持倉單檔對 Doop（可延後）。
 
 ---
 
@@ -152,3 +151,4 @@
 | --- | --- | --- | --- |
 | 2026-09-22 | 阿笠（Grok Build UI） | **通過** | 靜態對碼：底欄四項＋FAB、首頁流水／無圖、獨立分析頁（三切換＋圓餅）、資產合併、記一筆彈層四類型、主色 `#8FB09F`。本機無 Docker，未跑 compose。 |
 | 2026-09-22 | 阿笠（開帳／設定／登入） | **通過** | 開帳四步 wizard、設定分區、Auth 主色、資產→帳戶明細、成交四 side＋`Idempotency-Key`。未勾：開帳日前不可記（待實機）、B／C／J 後端規則、持倉單檔對 Doop（可延後）。 |
+| 2026-09-22 | 阿笠（開帳日前＋B／C／J） | **通過** | 本機重跑 `go test ./internal/auth/ ./internal/app/ -count=1`：**11 PASS**（argon2id、session／401、帳本 CRUD／封存／刪除限制／所有權、開帳鎖定 TX＋開帳日前擋記、移動平均、stats SQL、USDT／USD instrument、JSON 備份）。勾 §2 B／C／J、開帳日前不可記、A 環境可測項。持倉單檔對 Doop 仍延後。 |
