@@ -54,7 +54,7 @@
 - [x] Clone `Shuhimoon/Full-Expense-tracker`（或 `/workspace/full-jizhang`）（環境可測；本機路徑在）
 - [x] Postgres 起來且測試庫可連（2026-09-22 灰原哀驗收；migrate 以測試可跑為準）
 - [x] API：Go／chi／pgx 可測（2026-09-22；`go test ./internal/auth/ ./internal/app/` 11 PASS）
-- [ ] Web：React Vite PWA 可開；只經 API
+- [x] Web：React Vite PWA（2026-09-22 灰原哀驗收；`manifest.webmanifest` theme `#8FB09F`／bg `#F2EFE8`、icons 192／512／svg、`sw.js` NetworkFirst GET `/api`）
 - [x] 主色 `#8FB09F`；底欄對齊 Doop（帳本／分析圖／資產／設定＋FAB）（2026-09-22 灰原哀驗收）
 
 ### B. 帳號
@@ -66,7 +66,7 @@
 ### C. 帳本
 - [x] 多本：新增／改名／封存／取消封存；有資料不可刪（2026-09-22 灰原哀驗收；`TestBooksMultiCRUDArchiveSelectOwnership`）
 - [x] `last_book_id` 切換；業務 API 帶 `book_id` 且核對所有權（2026-09-22 灰原哀驗收）
-- [ ] 頂欄顯示當前帳本名（獨立切換頁**不要求**本輪）
+- [x] 頂欄顯示當前帳本名（2026-09-22 灰原哀驗收；`BookBar` 名＋chevron、只列未封存、可切換、管理→設定）
 
 ### D. 開帳（對 Doop 四步）
 - [x] 開帳日（2026-09-22 灰原哀驗收）
@@ -128,9 +128,9 @@
 3. ~~新建分析圖頁~~（已驗）  
 4. ~~資產頁合併~~（已驗）  
 5. ~~對齊開帳／設定／登入視覺~~（2026-09-22 已驗）  
-6. 其餘延後項／後端規則／環境 checklist（A／B／C／J）有空再補  
+6. ~~頂欄帳本／PWA~~（2026-09-22 已驗）；其餘延後項（持倉單檔對 Doop）有空再補  
 
-§1 #1–11、#14 與 §2 A／B／C／D／E／F／G／H／I／J 主項已於 2026-09-22 通過（UI 靜態＋`go test` 11 PASS）。未勾：Web PWA 手動、頂欄帳本顯示（UI）、持倉單檔對 Doop（可延後）。
+§1 #1–11、#14 與 §2 A／B／C／D／E／F／G／H／I／J 主項已於 2026-09-22 通過（UI 靜態＋`go test` 11 PASS）。未勾：持倉單檔對 Doop（可延後）。
 
 ---
 
@@ -152,3 +152,4 @@
 | 2026-09-22 | 阿笠（Grok Build UI） | **通過** | 靜態對碼：底欄四項＋FAB、首頁流水／無圖、獨立分析頁（三切換＋圓餅）、資產合併、記一筆彈層四類型、主色 `#8FB09F`。本機無 Docker，未跑 compose。 |
 | 2026-09-22 | 阿笠（開帳／設定／登入） | **通過** | 開帳四步 wizard、設定分區、Auth 主色、資產→帳戶明細、成交四 side＋`Idempotency-Key`。未勾：開帳日前不可記（待實機）、B／C／J 後端規則、持倉單檔對 Doop（可延後）。 |
 | 2026-09-22 | 阿笠（開帳日前＋B／C／J） | **通過** | 本機重跑 `go test ./internal/auth/ ./internal/app/ -count=1`：**11 PASS**（argon2id、session／401、帳本 CRUD／封存／刪除限制／所有權、開帳鎖定 TX＋開帳日前擋記、移動平均、stats SQL、USDT／USD instrument、JSON 備份）。勾 §2 B／C／J、開帳日前不可記、A 環境可測項。持倉單檔對 Doop 仍延後。 |
+| 2026-09-22 | 阿笠（頂欄＋PWA） | **通過** | `BookBar`：當前帳本名＋chevron、只列未封存、切換、`管理帳本`→設定；`web/dist` manifest theme `#8FB09F`／bg `#F2EFE8`、icons 192／512／svg、`sw.js`、VitePWA NetworkFirst GET `/api`。持倉單檔對 Doop 仍延後。 |
