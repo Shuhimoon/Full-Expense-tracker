@@ -4,9 +4,9 @@ import { api, ApiError, type Book, type User } from "./api";
 import Auth from "./pages/Auth";
 import Home from "./pages/Home";
 import Record from "./pages/Record";
-import Accounts from "./pages/Accounts";
 import AccountDetail from "./pages/AccountDetail";
-import Invest from "./pages/Invest";
+import Assets from "./pages/Assets";
+import Analytics from "./pages/Analytics";
 import Settings from "./pages/Settings";
 import Opening from "./pages/Opening";
 import DayLedger from "./pages/DayLedger";
@@ -31,12 +31,12 @@ export default function App() {
   const [quoteFailed, setQuoteFailed] = useState(false);
   const [quoteFailedSymbols, setQuoteFailedSymbols] = useState<string[]>([]);
   const loc = useLocation();
+  const nav = useNavigate();
 
   async function reload() {
     const u = await api.get<User>("/api/me");
     setUser(u);
-    const bs = await api.get<Book[]>("/api/books");
-    setBooks(bs);
+    setBooks(await api.get<Book[]>("/api/books"));
   }
 
   useEffect(() => {
@@ -76,9 +76,7 @@ export default function App() {
 
   useEffect(() => {
     function onFg() {
-      if (document.visibilityState === "visible") {
-        refreshQuotes().catch(() => {});
-      }
+      if (document.visibilityState === "visible") refreshQuotes().catch(() => {});
     }
     document.addEventListener("visibilitychange", onFg);
     window.addEventListener("focus", onFg);
@@ -88,9 +86,7 @@ export default function App() {
     };
   }, [refreshQuotes]);
 
-  if (user === undefined) {
-    return <div className="empty muted">載入中…</div>;
-  }
+  if (user === undefined) return <div className="empty muted">載入中…</div>;
   if (!user) {
     return (
       <Routes>
@@ -101,53 +97,54 @@ export default function App() {
   }
 
   const ctx: Ctx = { user, books, book: active, reload, selectBook, quoteFailed, quoteFailedSymbols, refreshQuotes };
+  const hideChrome = loc.pathname === "/record" || loc.pathname.startsWith("/opening");
 
   return (
-    <div className="app">
+    <div className={`app${hideChrome ? " hide-chrome" : ""}`}>
       <Routes>
         <Route path="/opening" element={<Opening ctx={ctx} />} />
-        <Route path="/record" element={<Record ctx={ctx} />} />
+        <Route path="/record" element={<Record ctx={ctx} asSheet />} />
         <Route path="/accounts/:id" element={<AccountDetail ctx={ctx} />} />
-        <Route path="/accounts" element={<Accounts ctx={ctx} />} />
+        <Route path="/accounts" element={<Navigate to="/assets" replace />} />
         <Route path="/invest/:id" element={<PositionDetail ctx={ctx} />} />
-        <Route path="/invest" element={<Invest ctx={ctx} />} />
+        <Route path="/invest" element={<Navigate to="/assets" replace />} />
+        <Route path="/assets" element={<Assets ctx={ctx} />} />
+        <Route path="/analytics" element={<Analytics ctx={ctx} />} />
         <Route path="/settings" element={<Settings ctx={ctx} onLogout={() => setUser(null)} />} />
         <Route path="/day/:date" element={<DayLedger ctx={ctx} />} />
         <Route path="/" element={<Home ctx={ctx} />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-      <Nav path={loc.pathname} />
+      {!hideChrome && (
+        <>
+          <button type="button" className="fab-btn" aria-label="記一筆" onClick={() => nav("/record")}>
+            ＋
+          </button>
+          <Nav path={loc.pathname} />
+        </>
+      )}
     </div>
   );
 }
 
 function Nav({ path }: { path: string }) {
-  const nav = useNavigate();
   const items = [
-    { to: "/", label: "首頁" },
-    { to: "/record", label: "記一筆", fab: true },
-    { to: "/accounts", label: "帳戶" },
-    { to: "/invest", label: "投資" },
-    { to: "/settings", label: "設定" },
+    { to: "/", label: "帳本", ico: "📒" },
+    { to: "/analytics", label: "分析圖", ico: "📊" },
+    { to: "/assets", label: "資產", ico: "💼" },
+    { to: "/settings", label: "設定", ico: "⚙️" },
   ];
   return (
     <nav className="nav">
-      {items.map((it) => (
-        <Link
-          key={it.to}
-          to={it.to}
-          className={path === it.to || (it.to !== "/" && path.startsWith(it.to)) ? "on" : ""}
-          onClick={(e) => {
-            if (it.fab) {
-              e.preventDefault();
-              nav("/record");
-            }
-          }}
-        >
-          {it.fab ? <span className="fab">＋</span> : it.label}
-          {it.fab ? <span>記一筆</span> : null}
-        </Link>
-      ))}
+      {items.map((it) => {
+        const on = it.to === "/" ? path === "/" : path === it.to || path.startsWith(it.to + "/");
+        return (
+          <Link key={it.to} to={it.to} className={on ? "on" : ""}>
+            <span className="nav-ico" aria-hidden>{it.ico}</span>
+            {it.label}
+          </Link>
+        );
+      })}
     </nav>
   );
 }
