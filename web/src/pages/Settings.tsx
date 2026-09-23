@@ -16,7 +16,7 @@ export default function Settings({ ctx, onLogout }: { ctx: Ctx; onLogout: () => 
 
   useEffect(() => {
     if (!book) return;
-    api.get<Category[]>(`/api/categories?book_id=${book.id}`).then(setCats);
+    api.get<Category[]>(`/api/categories?book_id=${book.id}`).then(setCats).catch(() => {});
   }, [book?.id]);
 
   async function addBook() {
@@ -110,6 +110,8 @@ export default function Settings({ ctx, onLogout }: { ctx: Ctx; onLogout: () => 
     try {
       await api.post("/api/password", { old: oldPw, new: newPw });
       setMsg("密碼已更新");
+      setOldPw("");
+      setNewPw("");
     } catch (e: any) {
       setErr(e.message);
     }
@@ -144,17 +146,42 @@ export default function Settings({ ctx, onLogout }: { ctx: Ctx; onLogout: () => 
 
   function bookRow(b: Book, archivedRow: boolean) {
     return (
-      <div className="list-item" key={b.id} style={{ flexWrap: "wrap", gap: 6 }}>
-        <span>{b.name}{b.id === book?.id ? "（目前）" : ""}</span>
-        <span style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+      <div className="settings-row" key={b.id}>
+        <div className="settings-ico" aria-hidden>
+          📒
+        </div>
+        <div className="settings-meta">
+          <div className="settings-name">
+            {b.name}
+            {b.id === book?.id ? "（目前）" : ""}
+          </div>
+          <div className="settings-sub">{archivedRow ? "已封存" : b.opening_locked ? `已開帳 ${b.opening_date || ""}` : "尚未開帳"}</div>
+        </div>
+        <div className="settings-actions">
           {!archivedRow && b.id !== book?.id && (
-            <button className="btn ghost" onClick={() => switchTo(b)}>切換</button>
+            <button type="button" className="btn ghost sm" onClick={() => switchTo(b)}>
+              切換
+            </button>
           )}
-          {!archivedRow && <button className="btn ghost" onClick={() => rename(b)}>改名</button>}
-          {!archivedRow && <button className="btn ghost" onClick={() => archive(b)}>封存</button>}
-          {archivedRow && <button className="btn ghost" onClick={() => unarchive(b)}>取消封存</button>}
-          <button className="btn ghost" onClick={() => del(b)}>刪除</button>
-        </span>
+          {!archivedRow && (
+            <button type="button" className="btn ghost sm" onClick={() => rename(b)}>
+              改名
+            </button>
+          )}
+          {!archivedRow && (
+            <button type="button" className="btn ghost sm" onClick={() => archive(b)}>
+              封存
+            </button>
+          )}
+          {archivedRow && (
+            <button type="button" className="btn ghost sm" onClick={() => unarchive(b)}>
+              取消封存
+            </button>
+          )}
+          <button type="button" className="btn ghost sm" onClick={() => del(b)}>
+            刪除
+          </button>
+        </div>
       </div>
     );
   }
@@ -162,53 +189,152 @@ export default function Settings({ ctx, onLogout }: { ctx: Ctx; onLogout: () => 
   return (
     <>
       <BookBar ctx={ctx} />
-      <div className="card">
-        <strong>帳本</strong>
-        <p className="muted">未封存／已封存分組。封存中不能記帳、不能開帳、不能寫入。頂欄切換器只列未封存。</p>
-        <div className="muted" style={{ marginTop: 8 }}>未封存</div>
-        {live.length === 0 && <div className="muted">尚無</div>}
-        {live.map((b) => bookRow(b, false))}
-        {archived.length > 0 && <div className="muted" style={{ marginTop: 12 }}>已封存</div>}
-        {archived.map((b) => bookRow(b, true))}
-        <div className="field">
-          <label>新增帳本（必填名稱）</label>
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="生活" />
+      <div className="settings-page">
+        <div className="settings-topbar">
+          <h1>設定</h1>
         </div>
-        <button className="btn" onClick={addBook}>新增</button>
-      </div>
-      <div className="card">
-        <strong>開帳</strong>
-        <p className="muted">{book?.opening_locked ? `已鎖定 ${book.opening_date}` : "尚未鎖定"}</p>
-        <button className="btn ghost" onClick={() => nav("/opening")}>開帳設定</button>
-      </div>
-      <div className="card">
-        <strong>分類</strong>
-        {cats.filter((c) => !c.archived_at).map((c) => (
-          <div className="list-item" key={c.id}>
-            <span>{c.kind === "income" ? "收" : "支"} {c.name}{c.is_system ? "（系統）" : ""}</span>
+
+        <div className="settings-section-label">帳本</div>
+        <div className="settings-group card">
+          {live.length === 0 && <div className="muted" style={{ padding: "12px 14px" }}>尚無未封存帳本</div>}
+          {live.map((b) => bookRow(b, false))}
+          {archived.length > 0 && <div className="settings-divider-label">已封存</div>}
+          {archived.map((b) => bookRow(b, true))}
+          <div className="settings-add">
+            <div className="field" style={{ margin: 0, flex: 1 }}>
+              <label>新增帳本</label>
+              <input value={name} onChange={(e) => setName(e.target.value)} placeholder="生活" />
+            </div>
+            <button type="button" className="btn" onClick={addBook}>
+              新增
+            </button>
           </div>
-        ))}
+          <p className="hint" style={{ margin: "8px 14px 12px" }}>
+            封存中不能記帳、不能開帳。頂欄切換器只列未封存。
+          </p>
+        </div>
+
+        <div className="settings-section-label">開帳入口</div>
+        <div className="settings-group card">
+          <button type="button" className="settings-row linkish" onClick={() => nav("/opening")}>
+            <div className="settings-ico" aria-hidden>
+              🏁
+            </div>
+            <div className="settings-meta">
+              <div className="settings-name">開始開帳</div>
+              <div className="settings-sub">
+                {book?.opening_locked
+                  ? `已鎖定 ${book.opening_date || ""}`
+                  : "選開帳日 → 帳戶餘額 → 現倉 → 鎖定"}
+              </div>
+            </div>
+            <span className="settings-chev" aria-hidden>
+              ›
+            </span>
+          </button>
+        </div>
+
+        <div className="settings-section-label">分類</div>
+        <div className="settings-group card">
+          <div className="settings-row">
+            <div className="settings-ico" aria-hidden>
+              🏷
+            </div>
+            <div className="settings-meta">
+              <div className="settings-name">分類管理</div>
+              <div className="settings-sub">支出 · 收入（含系統「股利」）</div>
+            </div>
+          </div>
+          <div className="settings-cats">
+            {cats.filter((c) => !c.archived_at).length === 0 && <div className="muted">尚無分類</div>}
+            {cats
+              .filter((c) => !c.archived_at)
+              .map((c) => (
+                <div className="settings-cat-chip" key={c.id}>
+                  <span className="settings-cat-kind">{c.kind === "income" ? "收" : "支"}</span>
+                  {c.name}
+                  {c.is_system ? "（系統）" : ""}
+                </div>
+              ))}
+          </div>
+        </div>
+
+        <div className="settings-section-label">備份</div>
+        <div className="settings-group card">
+          <div className="settings-row">
+            <div className="settings-ico" aria-hidden>
+              ☁️
+            </div>
+            <div className="settings-meta">
+              <div className="settings-name">備份與還原</div>
+              <div className="settings-sub">匯出／匯入 JSON（僅當前帳本）</div>
+            </div>
+          </div>
+          <div className="settings-backup-actions">
+            <button type="button" className="btn" onClick={exportBook} disabled={!book}>
+              匯出 JSON
+            </button>
+            <label className="btn ghost file-btn">
+              匯入還原
+              <input
+                type="file"
+                accept="application/json"
+                hidden
+                onChange={(e) => e.target.files && importBook(e.target.files[0])}
+              />
+            </label>
+          </div>
+        </div>
+
+        <div className="settings-section-label">帳號</div>
+        <div className="settings-group card">
+          <div className="settings-row">
+            <div className="settings-ico" aria-hidden>
+              👤
+            </div>
+            <div className="settings-meta">
+              <div className="settings-name">{ctx.user.email}</div>
+              <div className="settings-sub">登入帳號</div>
+            </div>
+          </div>
+          <div className="settings-pw">
+            <div className="field">
+              <label>舊密碼</label>
+              <input type="password" value={oldPw} onChange={(e) => setOldPw(e.target.value)} autoComplete="current-password" />
+            </div>
+            <div className="field">
+              <label>新密碼</label>
+              <input type="password" value={newPw} onChange={(e) => setNewPw(e.target.value)} autoComplete="new-password" />
+            </div>
+            <button type="button" className="btn ghost block" onClick={changePw}>
+              更新密碼
+            </button>
+          </div>
+          <button type="button" className="settings-row linkish danger" onClick={logout}>
+            <div className="settings-ico danger" aria-hidden>
+              ⤴
+            </div>
+            <div className="settings-meta">
+              <div className="settings-name">登出</div>
+            </div>
+          </button>
+        </div>
+
+        <div className="settings-section-label">關於</div>
+        <div className="settings-group card">
+          <div className="settings-about">
+            <p>基準幣 TWD（寫死）。成本法：移動平均。</p>
+            <p>正本在 PostgreSQL。時區 Asia/Taipei。</p>
+          </div>
+        </div>
+
+        {msg && (
+          <div className="card" style={{ color: "var(--accent-d)", fontWeight: 600 }}>
+            {msg}
+          </div>
+        )}
+        {err && <div className="error">{err}</div>}
       </div>
-      <div className="card">
-        <strong>備份</strong>
-        <p className="muted">匯出／還原只針對當前這本。JSON 不是資料庫。</p>
-        <button className="btn ghost" onClick={exportBook}>匯出 JSON</button>
-        <input type="file" accept="application/json" onChange={(e) => e.target.files && importBook(e.target.files[0])} />
-      </div>
-      <div className="card">
-        <strong>帳號</strong>
-        <p>{ctx.user.email}</p>
-        <div className="field"><label>舊密碼</label><input type="password" value={oldPw} onChange={(e) => setOldPw(e.target.value)} /></div>
-        <div className="field"><label>新密碼</label><input type="password" value={newPw} onChange={(e) => setNewPw(e.target.value)} /></div>
-        <button className="btn ghost" onClick={changePw}>改密碼</button>
-        <button className="btn" onClick={logout} style={{ marginLeft: 8 }}>登出</button>
-      </div>
-      <div className="card">
-        <strong>關於</strong>
-        <p>基準幣 TWD（寫死）。成本法：移動平均。正本在 PostgreSQL。時區 Asia/Taipei。</p>
-      </div>
-      {msg && <div className="card">{msg}</div>}
-      {err && <div className="error">{err}</div>}
     </>
   );
 }
