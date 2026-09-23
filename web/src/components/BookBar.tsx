@@ -8,8 +8,13 @@ export default function BookBar({ ctx, extra }: { ctx: Ctx; extra?: React.ReactN
   const active = ctx.books.filter((b) => !b.archived_at);
   return (
     <div className="topbar">
-      <button className="book" onClick={() => setOpen((v) => !v)} style={{ background: "none", border: 0 }}>
-        {book?.name || "選擇帳本"} <span className="chevron">▾</span>
+      <button
+        className="book"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        aria-haspopup="menu"
+      >
+        {book?.name || "選擇帳本"} <span className="chevron" aria-hidden="true">▾</span>
       </button>
       {extra}
       {open && (
@@ -17,13 +22,15 @@ export default function BookBar({ ctx, extra }: { ctx: Ctx; extra?: React.ReactN
           {active.map((b) => (
             <button
               key={b.id}
+              className={b.id === book?.id ? "active" : undefined}
+              aria-pressed={b.id === book?.id}
               onClick={async () => {
                 setOpen(false);
                 if (b.id !== book?.id) await ctx.selectBook(b.id);
               }}
             >
-              {b.name}
-              {b.id === book?.id ? " ✓" : ""}
+              <span>{b.name}</span>
+              {b.id === book?.id && <span className="switcher-check" aria-hidden="true">✓</span>}
             </button>
           ))}
           <Link to="/settings" onClick={() => setOpen(false)}>管理帳本</Link>
