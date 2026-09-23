@@ -12,8 +12,13 @@ const TABS = [
   { id: "trade", label: "成交" },
 ] as const;
 
-export default function Record({ ctx }: { ctx: Ctx }) {
+export default function Record({ ctx, asSheet }: { ctx: Ctx; asSheet?: boolean }) {
   const nav = useNavigate();
+  function closeSheet() {
+    if (window.history.length > 1) nav(-1);
+    else nav("/");
+  }
+
   const [sp] = useSearchParams();
   const book = ctx.book;
   const [tab, setTab] = useState<(typeof TABS)[number]["id"]>((sp.get("type") as any) || "expense");
@@ -126,9 +131,8 @@ export default function Record({ ctx }: { ctx: Ctx }) {
     }
   }
 
-  return (
+  const form = (
     <>
-      <BookBar ctx={ctx} />
       <div className="tabs">
         {TABS.map((t) => (
           <button key={t.id} className={tab === t.id ? "on" : ""} onClick={() => setTab(t.id)}>{t.label}</button>
@@ -242,6 +246,30 @@ export default function Record({ ctx }: { ctx: Ctx }) {
         {err && <div className="error">{err}</div>}
         <button className="btn block" disabled={busy} onClick={save}>{busy ? "儲存中…" : "儲存"}</button>
       </div>
+    </>
+  );
+
+  if (asSheet) {
+    return (
+      <div className="sheet-backdrop" onClick={closeSheet}>
+        <div className="sheet-panel" onClick={(e) => e.stopPropagation()}>
+          <div className="sheet-handle" />
+          <div className="sheet-head">
+            <strong>記一筆</strong>
+            <button type="button" className="sheet-close" onClick={closeSheet} aria-label="關閉">
+              ×
+            </button>
+          </div>
+          {form}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <BookBar ctx={ctx} />
+      {form}
     </>
   );
 }
