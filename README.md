@@ -1,42 +1,137 @@
-# Full 記帳 v1
+# Full Expense Tracker (Full 記帳)
 
-個人記帳 PWA。正本在 PostgreSQL，後端 Go/chi/pgx，前端 React + Vite PWA。
-基準幣 TWD、時區 Asia/Taipei、成本法移動平均。
+A self-hosted personal finance tracker delivered as a Progressive Web App.
+PostgreSQL is the single source of truth, the backend is written in Go, and the
+frontend is a React + Vite PWA. Base currency is TWD, time zone is Asia/Taipei,
+and investment cost basis uses the moving-average method.
 
-## 怎麼跑
+## Features
 
-前端靜態檔需已建置在 `web/dist`（此目錄若已有 dist 可略過建置）。然後：
+- **Multiple books (ledgers)** – keep separate ledgers per user and switch between them.
+- **Accounts, categories and transactions** – record income, expenses and transfers per book.
+- **Investment positions** – Taiwan stocks, US stocks, crypto and FX, with moving-average cost.
+- **Charts** – analytics views powered by Recharts.
+- **Calendar** – browse entries day by day after an opening-balance snapshot.
+- **Installable PWA** – works on mobile home screens, with pull-to-refresh.
 
-```bash
-cd /workspace/full-jizhang
-docker compose up --build -d
+## Tech stack
+
+| Layer    | Technology                                            |
+|----------|-------------------------------------------------------|
+| Backend  | Go, chi router, pgx, golang-migrate                   |
+| Database | PostgreSQL 16                                         |
+| Frontend | React, TypeScript, Vite, vite-plugin-pwa, Recharts    |
+| Serving  | nginx (static files + reverse proxy for `/api`)       |
+
+## Project layout
+
+```
+api/         Go API (cmd/server, internal/app, internal/auth, migrations/)
+web/         React + Vite PWA
+nginx.conf   nginx config used by the web image
+docker-compose.yml
 ```
 
-獨立 CLI：`docker-compose up --build -d`
+## Installation (Docker Compose)
 
-開：
+Requirements: Docker with the Compose plugin, Node.js 20+ (to build the frontend).
 
-- 網頁（nginx 反代 `/api`）：http://localhost/
-- API health：http://localhost/api/health
-- API 直連（除錯）：http://localhost:8080/api/health
-- Postgres：localhost:5432
+1. Build the frontend (the web image copies `web/dist`):
 
-停止：`docker compose down`
+   ```bash
+   cd web
+   npm ci
+   npm run build
+   cd ..
+   ```
 
-### 開發用資料庫帳密（寫死，勿用於正式環境）
+2. Start everything:
 
-- POSTGRES_DB=fulljizhang
-- POSTGRES_USER=fulljizhang
-- POSTGRES_PASSWORD=fulljizhang
+   ```bash
+   docker compose up --build -d
+   ```
 
-### 本機組網路備註
+3. Open:
 
-此環境 Docker bridge 容器互連會 timeout，compose 以 `extra_hosts: host-gateway`
-把 `postgres` / `api` 指到已發布的 5432 / 8080。一般 Linux Docker 若 bridge 正常，
-同一份 compose 仍可透過發布埠運作。
+   - Web app: http://localhost/
+   - API health (via nginx): http://localhost/api/health
+   - API direct (debug): http://localhost:8080/api/health
+   - PostgreSQL: localhost:5432
 
-### 前端建置（若沒有 web/dist）
+Stop with `docker compose down`. The API runs database migrations on startup,
+then listens on `:8080`.
 
-在 Node 20+ 環境進入 `web/`，安裝依賴並執行 `run build`（Vite PWA）。
+## Configuration
 
-API 映像會在啟動時跑 golang-migrate，再聽 :8080。
+The API reads these environment variables:
+
+| Variable          | Default                                                                  | Description |
+|-------------------|--------------------------------------------------------------------------|-------------|
+| `DATABASE_URL`    | `postgres://fulljizhang:fulljizhang@127.0.0.1:5432/fulljizhang?sslmode=disable` | PostgreSQL connection string |
+| `LISTEN_ADDR`     | `:8080`                                                                  | HTTP listen address |
+| `MIGRATIONS_PATH` | first existing of `/migrations`, `migrations`, `../migrations`           | Directory of SQL migrations |
+
+`docker-compose.yml` also sets `COOKIE_SECURE: "false"` on the api service.
+
+### Development database credentials (hardcoded – do NOT use in production)
+
+```
+POSTGRES_DB=fulljizhang
+POSTGRES_USER=fulljizhang
+POSTGRES_PASSWORD=fulljizhang
+```
+
+Change these (and `DATABASE_URL`) before exposing the app anywhere.
+
+### Networking note
+
+The compose file uses `extra_hosts: host-gateway` so `postgres` / `api` resolve
+to the published ports 5432 / 8080 on the host (a workaround for environments
+where container-to-container bridge networking times out). On a normal Linux
+Docker setup the same file still works.
+
+## Usage
+
+1. Open http://localhost/ and create an account / sign in.
+2. Create or pick a book from the book bar.
+3. Set the opening snapshot (accounts and balances) to lock the opening date.
+4. Add accounts and categories, then record transactions.
+5. Add stock / crypto trades on the Invest page; positions show moving-average cost.
+6. Check the Analytics page for charts and the calendar for daily entries.
+
+Quick API check:
+
+```bash
+curl http://localhost:8080/api/health
+```
+
+## Running tests
+
+Backend tests live under `api/internal/...`:
+
+```bash
+cd api
+go test ./...
+```
+
+Some tests in `internal/app` need PostgreSQL via `DATABASE_URL`; they are skipped
+automatically if the database is unreachable:
+
+```bash
+docker compose up -d postgres
+cd api
+DATABASE_URL=postgres://fulljizhang:fulljizhang@localhost:5432/fulljizhang?sslmode=disable go test ./...
+```
+
+## License
+
+Released under the [MIT License](LICENSE). Copyright (c) 2026 Shuhimoon.
+
+---
+
+## 中文說明
+
+Full 記帳是自架的個人記帳 PWA：正本在 PostgreSQL，後端 Go/chi/pgx，前端 React + Vite PWA；
+基準幣 TWD、時區 Asia/Taipei、投資成本採移動平均法。支援多本帳本、帳戶／分類／交易、
+台股／美股／加密貨幣持倉、圖表與日曆。先在 `web/` 執行 `npm run build`，再 `docker compose up --build -d`
+即可啟動。範例中的資料庫帳密為開發用寫死值，勿用於正式環境。
