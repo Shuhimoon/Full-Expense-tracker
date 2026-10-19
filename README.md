@@ -125,7 +125,7 @@ DATABASE_URL=postgres://fulljizhang:fulljizhang@localhost:5432/fulljizhang?sslmo
 
 ## License
 
-Released under the [MIT License](LICENSE). Copyright (c) 2026 Shuhimoon.
+Copyright (c) 2026 Shuhimoon. Licensed under the [GNU Affero General Public License v3.0](LICENSE) (AGPL-3.0); see `LICENSE` for the full text.
 
 ---
 
@@ -135,3 +135,5 @@ Full 記帳是自架的個人記帳 PWA：正本在 PostgreSQL，後端 Go/chi/p
 基準幣 TWD、時區 Asia/Taipei、投資成本採移動平均法。支援多本帳本、帳戶／分類／交易、
 台股／美股／加密貨幣持倉、圖表與日曆。先在 `web/` 執行 `npm run build`，再 `docker compose up --build -d`
 即可啟動。範例中的資料庫帳密為開發用寫死值，勿用於正式環境。
+
+授權：本專案採用 GNU Affero General Public License v3.0（AGPL-3.0），完整條款見 `LICENSE`。
