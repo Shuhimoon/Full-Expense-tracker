@@ -1,84 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:full_jizhang/api.dart';
-import 'package:full_jizhang/app.dart';
-import 'package:google_fonts/google_fonts.dart';
 
-class FakeApi implements ApiClient {
-  AppUser? current;
-  String? loginError;
-  String? registerError;
-  String? logoutError;
-  int logins = 0;
-  int registers = 0;
-  int logouts = 0;
-
-  @override
-  Future<AppUser> me() async {
-    final user = current;
-    if (user == null) throw ApiException('請先登入', status: 401);
-    return user;
-  }
-
-  @override
-  Future<AppUser> login({
-    required String email,
-    required String password,
-  }) async {
-    logins++;
-    final error = loginError;
-    if (error != null) throw ApiException(error, status: 401);
-    current = AppUser(
-      id: 'u1',
-      email: email,
-      lastBookId: null,
-      createdAt: '2026-01-01T00:00:00Z',
-    );
-    return current!;
-  }
-
-  @override
-  Future<AppUser> register({
-    required String email,
-    required String password,
-  }) async {
-    registers++;
-    final error = registerError;
-    if (error != null) throw ApiException(error, status: 400);
-    current = AppUser(
-      id: 'u2',
-      email: email,
-      lastBookId: null,
-      createdAt: '2026-01-01T00:00:00Z',
-    );
-    return current!;
-  }
-
-  @override
-  void close() {}
-
-  @override
-  Future<void> logout() async {
-    logouts++;
-    final error = logoutError;
-    if (error != null) throw ApiException(error, status: 500);
-    current = null;
-  }
-}
-
-Future<void> pumpApp(WidgetTester tester, ApiClient api) async {
-  tester.view.physicalSize = const Size(390, 844);
-  tester.view.devicePixelRatio = 1;
-  addTearDown(tester.view.resetPhysicalSize);
-  addTearDown(tester.view.resetDevicePixelRatio);
-  await tester.pumpWidget(FullJizhangApp(api: api));
-  await tester.pumpAndSettle();
-}
+import 'support/fake_api.dart';
+import 'support/pump_app.dart';
 
 void main() {
-  setUpAll(() {
-    GoogleFonts.config.allowRuntimeFetching = false;
-  });
+  setUpAll(configureTestFonts);
 
   testWidgets('logged-out launch shows the glass login form', (tester) async {
     await pumpApp(tester, FakeApi());
@@ -115,10 +42,7 @@ void main() {
 
     await tester.tap(find.byKey(const Key('auth-tab-login')));
     await tester.pump();
-    await tester.enterText(
-      find.byKey(const Key('password-field')),
-      'password1',
-    );
+    await tester.enterText(find.byKey(const Key('password-field')), 'password1');
     await tester.tap(find.byKey(const Key('auth-submit')));
     await tester.pumpAndSettle();
 
@@ -132,25 +56,16 @@ void main() {
   ) async {
     final api = FakeApi();
     await pumpApp(tester, api);
+    await login(tester);
 
-    await tester.enterText(
-      find.byKey(const Key('email-field')),
-      'shuhi@example.com',
-    );
-    await tester.enterText(
-      find.byKey(const Key('password-field')),
-      'password1',
-    );
-    await tester.tap(find.byKey(const Key('auth-submit')));
-    await tester.pumpAndSettle();
-
-    expect(find.text('帳本'), findsOneWidget);
+    expect(find.text('建立帳本'), findsOneWidget);
     expect(find.byKey(const Key('nav-ledger')), findsOneWidget);
     expect(api.logins, 1);
 
     await tester.tap(find.byKey(const Key('nav-analytics')));
     await tester.pumpAndSettle();
-    expect(find.text('分析圖'), findsOneWidget);
+    expect(find.text('分析'), findsOneWidget);
+    expect(find.byKey(const Key('analytics-empty-book')), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('nav-assets')));
     await tester.pumpAndSettle();
@@ -159,10 +74,12 @@ void main() {
     await tester.tap(find.byKey(const Key('fab-record')));
     await tester.pumpAndSettle();
     expect(find.text('記一筆'), findsOneWidget);
-    expect(find.byKey(const Key('nav-ledger')), findsNothing);
+    expect(find.text('資產'), findsOneWidget);
+    expect(find.byKey(const Key('nav-ledger')), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('record-close')));
     await tester.pumpAndSettle();
+    expect(find.text('記一筆'), findsNothing);
     expect(find.text('資產'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('nav-settings')));
