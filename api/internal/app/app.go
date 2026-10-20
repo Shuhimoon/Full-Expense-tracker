@@ -85,7 +85,6 @@ func (a *App) Router() http.Handler {
 
 		r.Get("/api/books/{id}/opening", a.handleOpeningGet)
 		r.Put("/api/books/{id}/opening", a.handleOpeningPut)
-		r.Post("/api/books/{id}/opening/lock", a.handleOpeningLock)
 
 		r.Get("/api/accounts", a.handleAccountsList)
 		r.Post("/api/accounts", a.handleAccountsCreate)
@@ -294,7 +293,6 @@ type Book struct {
 	ArchivedAt    *time.Time `json:"archived_at"`
 	BaseCurrency  string     `json:"base_currency"`
 	OpeningDate   *string    `json:"opening_date"`
-	OpeningLocked bool       `json:"opening_locked"`
 	Timezone      string     `json:"timezone"`
 	CostMethod    string     `json:"cost_method"`
 	Version       int        `json:"version"`
@@ -304,7 +302,7 @@ type Book struct {
 func scanBook(row pgx.Row) (Book, error) {
 	var b Book
 	var od *time.Time
-	err := row.Scan(&b.ID, &b.UserID, &b.Name, &b.ArchivedAt, &b.BaseCurrency, &od, &b.OpeningLocked, &b.Timezone, &b.CostMethod, &b.Version, &b.CreatedAt)
+	err := row.Scan(&b.ID, &b.UserID, &b.Name, &b.ArchivedAt, &b.BaseCurrency, &od, &b.Timezone, &b.CostMethod, &b.Version, &b.CreatedAt)
 	if od != nil {
 		s := od.Format("2006-01-02")
 		b.OpeningDate = &s
@@ -312,7 +310,7 @@ func scanBook(row pgx.Row) (Book, error) {
 	return b, err
 }
 
-const bookCols = `id, user_id, name, archived_at, base_currency, opening_date, opening_locked, timezone, cost_method, version, created_at`
+const bookCols = `id, user_id, name, archived_at, base_currency, opening_date, timezone, cost_method, version, created_at`
 
 func (a *App) loadBook(ctx context.Context, userID, bookID uuid.UUID) (Book, error) {
 	b, err := scanBook(a.pool.QueryRow(ctx, `SELECT `+bookCols+` FROM books WHERE id=$1 AND user_id=$2`, bookID, userID))

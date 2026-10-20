@@ -194,9 +194,6 @@ func (a *App) importBook(ctx context.Context, bookID uuid.UUID, payload map[stri
 			if od, ok := bk["opening_date"].(string); ok && od != "" {
 				_, _ = tx.Exec(ctx, `UPDATE books SET opening_date=$1 WHERE id=$2`, asDate(od), bookID)
 			}
-			if locked, ok := bk["opening_locked"].(bool); ok {
-				_, _ = tx.Exec(ctx, `UPDATE books SET opening_locked=$1 WHERE id=$2`, locked, bookID)
-			}
 		}
 	}
 

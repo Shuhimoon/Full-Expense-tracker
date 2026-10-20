@@ -45,7 +45,7 @@ func TestImportRestoresTradePairID(t *testing.T) {
 	t.Cleanup(func() {
 		_, _ = pool.Exec(context.Background(), `DELETE FROM users WHERE id=$1`, userID)
 	})
-	if err := pool.QueryRow(ctx, `INSERT INTO books (user_id, name, opening_date, opening_locked) VALUES ($1,$2,'2026-01-01',true) RETURNING id`, userID, "pair-smoke").Scan(&bookID); err != nil {
+	if err := pool.QueryRow(ctx, `INSERT INTO books (user_id, name, opening_date) VALUES ($1,$2,'2026-01-01') RETURNING id`, userID, "pair-smoke").Scan(&bookID); err != nil {
 		t.Fatalf("book: %v", err)
 	}
 	if err := pool.QueryRow(ctx, `INSERT INTO accounts (book_id, name, type) VALUES ($1,'交易所A','exchange') RETURNING id`, bookID).Scan(&accA); err != nil {
