@@ -125,10 +125,6 @@ func (a *App) handleTradesCreate(w http.ResponseWriter, r *http.Request) {
 	if rejectArchivedWrite(w, b) {
 		return
 	}
-	if !b.OpeningLocked {
-		writeErr(w, http.StatusConflict, "請先鎖定開帳再記成交")
-		return
-	}
 	if body.Date == "" {
 		body.Date = todayStr()
 	}
