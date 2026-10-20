@@ -198,6 +198,13 @@ abstract class ApiClient {
     required String idempotencyKey,
   });
 
+  Future<OpeningSnapshot> getOpening(String bookId);
+
+  Future<OpeningSnapshot> putOpening({
+    required String bookId,
+    required Map<String, dynamic> body,
+  });
+
   void close() {}
 }
 
@@ -572,6 +579,29 @@ class DioApiClient implements ApiClient {
       ),
     );
     return _object(response.data);
+  }
+
+  @override
+  Future<OpeningSnapshot> getOpening(String bookId) async {
+    final response = await _send(
+      () => dio.get<dynamic>('/api/books/$bookId/opening'),
+    );
+    return OpeningSnapshot.fromJson(_object(response.data));
+  }
+
+  @override
+  Future<OpeningSnapshot> putOpening({
+    required String bookId,
+    required Map<String, dynamic> body,
+  }) async {
+    final response = await _send(
+      () => dio.put<dynamic>(
+        '/api/books/$bookId/opening',
+        data: body,
+        options: _json(idempotencyKey: newIdempotencyKey()),
+      ),
+    );
+    return OpeningSnapshot.fromJson(_object(response.data));
   }
 
   @override

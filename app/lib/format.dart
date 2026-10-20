@@ -130,6 +130,65 @@ String accountTypeLabel(String type) {
   }
 }
 
+/// Postgres `asset_class`. Any other value fails the instrument insert.
+const assetClassValues = ['tw_stock', 'us_stock', 'crypto', 'fx'];
+
+/// Postgres `ccy`, used as `price_ccy` and `quote_currency`.
+const priceCurrencyValues = ['TWD', 'USD'];
+
+String assetClassLabel(String value) {
+  switch (value) {
+    case 'tw_stock':
+      return '台股';
+    case 'us_stock':
+      return '美股';
+    case 'crypto':
+      return '加密貨幣';
+    case 'fx':
+      return '外匯／穩定幣';
+    default:
+      return value;
+  }
+}
+
+/// Same default as `ensureInstrument` when `quote_currency` is empty.
+String defaultQuoteCurrency(String assetClass) {
+  return assetClass == 'tw_stock' ? 'TWD' : 'USD';
+}
+
+/// Asia/Taipei calendar day of a book `created_at` timestamp.
+String bookCreationDay(String createdAt, {DateTime? clock}) {
+  final parsed = DateTime.tryParse(createdAt);
+  if (parsed == null) return taipeiToday(clock);
+  return taipeiToday(parsed);
+}
+
+final _nonNegativeDecimal = RegExp(r'^\d+(\.\d+)?$');
+
+/// Empty is zero. Commas are ignored. Null means the text is not a valid amount.
+int? readWholeAmount(String raw) {
+  final trimmed = raw.trim();
+  if (trimmed.isEmpty) return 0;
+  if (trimmed.startsWith('-') || trimmed.startsWith('−')) return null;
+  return parseWholeAmount(trimmed);
+}
+
+/// Empty is `"0"`. Null means the text is not a non-negative decimal.
+String? readDecimal(String raw) {
+  final cleaned = raw.replaceAll(',', '').replaceAll('，', '').trim();
+  if (cleaned.isEmpty) return '0';
+  if (!_nonNegativeDecimal.hasMatch(cleaned)) return null;
+  return cleaned;
+}
+
+int roundDecimal(String raw) {
+  final cleaned = raw.replaceAll(',', '').replaceAll('，', '').trim();
+  if (cleaned.isEmpty) return 0;
+  final value = double.tryParse(cleaned);
+  if (value == null) return 0;
+  return value.round();
+}
+
 int? parseWholeAmount(String raw) {
   final cleaned = raw.replaceAll(',', '').replaceAll('，', '').trim();
   if (!RegExp(r'^\d+$').hasMatch(cleaned)) return null;

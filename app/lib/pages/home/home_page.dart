@@ -223,6 +223,10 @@ class _HomePageState extends State<HomePage> {
             ),
           )
         else ...[
+          if (_offerOpening) ...[
+            _OpeningOffer(onTap: () => context.push('/opening')),
+            const SizedBox(height: 8),
+          ],
           _SpendCard(summary: summary),
           const SizedBox(height: 8),
           _NetCard(summary: summary),
@@ -232,6 +236,12 @@ class _HomePageState extends State<HomePage> {
         ErrorLine(_error, lineKey: const Key('home-error')),
       ],
     );
+  }
+
+  bool get _offerOpening {
+    final book = BookScope.of(context).current;
+    if (book == null || book.archived) return false;
+    return !_entries.any((entry) => entry.type == 'opening_balance');
   }
 
   List<Widget> _ledger(String today) {
@@ -648,5 +658,33 @@ class _EntryRow extends StatelessWidget {
       return Icons.directions_subway_outlined;
     }
     return Icons.shopping_bag_outlined;
+  }
+}
+
+class _OpeningOffer extends StatelessWidget {
+  const _OpeningOffer({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return SoftCard(
+      child: Row(
+        children: [
+          const Expanded(
+            child: Text(
+              '開帳為選填，可帶入現有餘額與持倉。',
+              key: Key('home-opening-hint'),
+              style: TextStyle(fontSize: 13, height: 1.35),
+            ),
+          ),
+          TextButton(
+            key: const Key('home-opening'),
+            onPressed: onTap,
+            child: const Text('開始開帳'),
+          ),
+        ],
+      ),
+    );
   }
 }

@@ -363,6 +363,102 @@ class Position {
   }
 }
 
+class OpeningCashDraft {
+  const OpeningCashDraft({required this.accountId, required this.amount});
+
+  final String accountId;
+  final int amount;
+
+  factory OpeningCashDraft.fromJson(Map<String, dynamic> json) {
+    return OpeningCashDraft(
+      accountId: jsonStr(json['account_id']),
+      amount: jsonInt(json['amount']),
+    );
+  }
+}
+
+class OpeningPositionDraft {
+  const OpeningPositionDraft({
+    required this.accountId,
+    required this.instrumentId,
+    required this.symbol,
+    required this.name,
+    required this.assetClass,
+    required this.quoteCurrency,
+    required this.qty,
+    required this.costTwd,
+    required this.costUnknown,
+  });
+
+  final String accountId;
+  final String? instrumentId;
+  final String symbol;
+  final String name;
+  final String assetClass;
+  final String quoteCurrency;
+  final String qty;
+  final String costTwd;
+  final bool costUnknown;
+
+  factory OpeningPositionDraft.fromJson(Map<String, dynamic> json) {
+    final instrument = json['instrument_id'];
+    final instrumentId = instrument == null || '$instrument'.isEmpty
+        ? null
+        : '$instrument';
+    return OpeningPositionDraft(
+      accountId: jsonStr(json['account_id']),
+      instrumentId: instrumentId,
+      symbol: jsonStr(json['symbol']),
+      name: jsonStr(json['name']),
+      assetClass: jsonStr(json['asset_class']),
+      quoteCurrency: jsonStr(json['quote_currency']),
+      qty: jsonStr(json['qty']),
+      costTwd: jsonStr(json['cost_twd']),
+      costUnknown: json['cost_unknown'] == true,
+    );
+  }
+}
+
+class OpeningSnapshot {
+  const OpeningSnapshot({
+    required this.openingDate,
+    required this.accounts,
+    required this.cashDrafts,
+    required this.positionDrafts,
+    required this.previewNetWorth,
+    required this.someCostUnknown,
+  });
+
+  final String? openingDate;
+  final List<Account> accounts;
+  final List<OpeningCashDraft> cashDrafts;
+  final List<OpeningPositionDraft> positionDrafts;
+  final int previewNetWorth;
+  final bool someCostUnknown;
+
+  factory OpeningSnapshot.fromJson(Map<String, dynamic> json) {
+    return OpeningSnapshot(
+      openingDate: jsonDate(json['opening_date']),
+      accounts: _jsonObjects(json['accounts'], Account.fromJson),
+      cashDrafts: _jsonObjects(json['cash_drafts'], OpeningCashDraft.fromJson),
+      positionDrafts: _jsonObjects(
+        json['position_drafts'],
+        OpeningPositionDraft.fromJson,
+      ),
+      previewNetWorth: jsonInt(json['preview_net_worth']),
+      someCostUnknown: json['some_cost_unknown'] == true,
+    );
+  }
+}
+
+List<T> _jsonObjects<T>(Object? raw, T Function(Map<String, dynamic>) parse) {
+  if (raw is! List) return <T>[];
+  return [
+    for (final item in raw)
+      if (item is Map) parse(Map<String, dynamic>.from(item)),
+  ];
+}
+
 class QuoteRefresh {
   const QuoteRefresh({
     required this.updated,
