@@ -11,6 +11,8 @@ abstract final class AppColors {
   static const sage = Color(0xFF8FB09F);
   static const sageDark = Color(0xFF5F8574);
   static const expense = Color(0xFF8B1A3A);
+  static const up = Color(0xFF34C759);
+  static const secondary = Color(0xFF8E8E93);
   static const ink = Color(0xFF1C1917);
   static const muted = Color(0xFF8A8178);
   static const faint = Color(0xFFB7AFA6);
