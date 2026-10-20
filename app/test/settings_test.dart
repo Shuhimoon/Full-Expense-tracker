@@ -30,24 +30,31 @@ void main() {
     expect(find.text('開始開帳'), findsOneWidget);
     expect(find.text('銀行自動同步'), findsOneWidget);
     expect(find.text('這個版本沒有'), findsOneWidget);
-    expect(find.text('開帳後才可記一筆與看分析。多本帳本各自獨立開帳日。'), findsOneWidget);
+    expect(
+      find.text('新帳本可直接記帳，開帳為選填。多本帳本各自獨立開帳日。'),
+      findsOneWidget,
+    );
     expect(
       tester.widget<InkWell>(find.byKey(const Key('settings-disabled'))).onTap,
       isNull,
     );
   });
 
-  testWidgets('opening is a stub route, not a gate', (tester) async {
+  testWidgets('opening wizard opens from settings and is not a gate', (
+    tester,
+  ) async {
     await _openSettings(tester);
     await tester.tap(find.byKey(const Key('settings-opening')));
     await tester.pumpAndSettle();
 
-    expect(find.byKey(const Key('opening-stub')), findsOneWidget);
-    expect(find.textContaining('下一個里程碑'), findsOneWidget);
+    expect(find.text('選開帳日'), findsOneWidget);
+    expect(find.text('步驟 1／4 · 開帳'), findsOneWidget);
+    expect(find.textContaining('鎖定'), findsNothing);
 
     await tester.tap(find.byKey(const Key('opening-back')));
     await tester.pumpAndSettle();
     expect(find.text('設定'), findsOneWidget);
+    expect(find.byKey(const Key('fab-record')), findsOneWidget);
   });
 
   testWidgets('categories can be added, and system ones cannot be deleted', (

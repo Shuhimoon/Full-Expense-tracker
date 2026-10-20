@@ -132,4 +132,67 @@ void main() {
     expect(api.createEntryStatus, 422);
     expect(find.text('記一筆'), findsOneWidget);
   });
+
+  testWidgets('a trade sends the asset class and price currency', (
+    tester,
+  ) async {
+    final api = await _openSheet(
+      tester,
+      accounts: [sampleAccount(id: 'a9', name: '幣安', type: 'exchange')],
+    );
+    await tester.tap(find.byKey(const Key('record-tab-trade')));
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.byKey(const Key('record-asset')));
+    await tester.tap(find.byKey(const Key('record-asset')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('pick-tw_stock')), findsOneWidget);
+    expect(find.byKey(const Key('pick-us_stock')), findsOneWidget);
+    expect(find.byKey(const Key('pick-crypto')), findsOneWidget);
+    expect(find.byKey(const Key('pick-fx')), findsOneWidget);
+    expect(find.text('USDT'), findsNothing);
+    await tester.tap(find.byKey(const Key('pick-crypto')));
+    await tester.pumpAndSettle();
+    expect(find.text('加密貨幣'), findsOneWidget);
+
+    await tester.ensureVisible(find.byKey(const Key('record-price-ccy')));
+    await tester.tap(find.byKey(const Key('record-price-ccy')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('pick-TWD')), findsOneWidget);
+    expect(find.byKey(const Key('pick-USD')), findsOneWidget);
+    expect(find.text('EUR'), findsNothing);
+    await tester.tap(find.byKey(const Key('pick-TWD')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('record-symbol')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('record-symbol-field')), 'btc');
+    await tester.tap(find.byKey(const Key('record-text-ok')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('record-qty')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('record-qty-field')), '0.25');
+    await tester.tap(find.byKey(const Key('record-text-ok')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('record-price')));
+    await tester.tap(find.byKey(const Key('record-price')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('record-price-field')), '100');
+    await tester.tap(find.byKey(const Key('record-text-ok')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('record-save')));
+    await tester.tap(find.byKey(const Key('record-save')));
+    await tester.pumpAndSettle();
+
+    expect(api.createTradeCalls, 1);
+    expect(api.lastTradeBody?['asset_class'], 'crypto');
+    expect(api.lastTradeBody?['price_ccy'], 'TWD');
+    expect(api.lastTradeBody?['quote_currency'], 'TWD');
+    expect(api.lastTradeBody?['symbol'], 'BTC');
+    expect(api.lastTradeBody?['side'], 'buy');
+    expect(api.lastTradeBody?['qty'], '0.25');
+    expect(api.lastTradeBody?['price'], '100');
+    expect(api.lastTradeBody?['account_id'], 'a9');
+    expect(api.lastTradeKey, matches(_uuid));
+  });
 }
