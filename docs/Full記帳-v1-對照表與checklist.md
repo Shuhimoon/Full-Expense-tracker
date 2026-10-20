@@ -13,6 +13,7 @@
 - 其他代理人（柯南調度除外之實作／設計）**不得**自行改對照表勾選狀態或刪改項目。
 - **完成項目流程**：實作者／設計師完成後，向 **灰原哀** 提驗收 → 她檢查「是否完成、有無遺漏」→ 由其（或 Shuhi）更新本檔勾選。
 - GitHub：`docs/Full記帳-v1-對照表與checklist.md`；CODEOWNERS 鎖定此路徑需 Shuhi review。
+- **UI 驗收規則（2026-10-20 已定）**：UI 驗收＝Flutter web 實機截圖對 Doop frame（390×844 逐頁並排；版面／元件／圖示／文字／顏色），不需 Docker；不再只做靜態對碼。前端改 Flutter 後，既有 UI 勾選需在 Flutter 重驗。
 
 
 狀態欄說明：
@@ -37,14 +38,14 @@
 | 8 | 設定：帳本 CRUD／開帳入口／分類／備份／登出 | `0N9oT5Ax2q` | **設計好**（2026-09-07 驗收） | 已有 | **可 build**（2026-09-22 驗收） | OK | `Settings.tsx` 分區齊 |
 | 9 | 記一筆彈層（支出示意） | `q273gYu-Cj`（另有舊 `HngcMO3aMK`） | **設計好**（2026-09-07 驗收） | 已有 entries | **可 build**（2026-09-22 驗收） | OK | FAB→`/record` `asSheet` |
 | 10 | 記一筆四類型：支出／收入／轉帳／成交 | `q273gYu-Cj` 同層切 | **設計好**（2026-09-07 驗收） | 已有 | **可 build**（2026-09-22 驗收） | OK | 四 tab 同層；成交含買賣／轉倉／空投 |
-| 11 | 開帳流程（日→餘額→現倉→鎖定） | `rZ0KEpCTCs`→`shTyYPkl4-`→`Bkl20hKz5B`→`5Wjm9YUjPA` | **設計好**（2026-09-07 驗收） | 已有 opening | **可 build**（2026-09-22 驗收） | OK | `Opening.tsx` 四步 wizard |
+| 11 | 開帳流程（日→餘額→現倉→預覽儲存；~~鎖定~~ 已移除（2026-10-20 規格變更）） | `rZ0KEpCTCs`→`shTyYPkl4-`→`Bkl20hKz5B`→`5Wjm9YUjPA` | **設計好**（2026-09-07 驗收） | 已有 opening | **可 build**（2026-09-22 驗收） | OK | `Opening.tsx` 四步 wizard；第 4 步「確認鎖定」需改為「預覽＋儲存」、`5Wjm9YUjPA` 待小蘭改稿 |
 | 12 | 帳本切換（多本） | 頂欄／設定（獨立頁可延後） | 部分（設定內） | 已有 select | 可 build（`BookBar`＋設定） | 可 build | **獨立切換頁延後** |
 | 13 | 日曆點進當日流水 | — | 可延後設計 | 已有 | 可 build（`DayLedger.tsx`） | 可延後視覺 | |
 | 14 | 帳戶明細 | — | 可併資產 | 已有 | **可 build**（2026-09-22 驗收） | OK | 資產列→`/accounts/:id` |
 | 15 | 持倉單檔（成本／現值／損益／成交） | — | **可延後** | 已有 | 可 build（`PositionDetail`） | **可延後對 Doop**；API／舊頁在 | |
 | 16 | 報價刷新／手改現價 | — | 手改 UI 可延後 | 已有 quotes／fx | 部分（下拉刷新） | 手改畫面延後 | |
 | 17 | 備份匯出／還原（當前帳本 JSON） | 設定內 | 設計好（設定） | 已有 | 可 build（設定備份區） | 可 build | 非 CSV 開帳 |
-| 18 | PWA 可安裝、Postgres 正本、Go API | — | — | 架構已定 | 專案骨架在 | build 環境 | Go chi／pgx／React Vite |
+| 18 | Flutter 前端（原 PWA，改 Flutter 2026-10-20）、Postgres 正本、Go API | — | — | 架構已定 | 專案骨架在 | build 環境 | Go chi／pgx；前端改 Flutter（含 Flutter web），2026-10-20 |
 
 ---
 
@@ -54,8 +55,8 @@
 - [x] Clone `Shuhimoon/Full-Expense-tracker`（或 `/workspace/full-jizhang`）（環境可測；本機路徑在）
 - [x] Postgres 起來且測試庫可連（2026-09-22 灰原哀驗收；migrate 以測試可跑為準）
 - [x] API：Go／chi／pgx 可測（2026-09-22；`go test ./internal/auth/ ./internal/app/` 11 PASS）
-- [x] Web：React Vite PWA（2026-09-22 灰原哀驗收；`manifest.webmanifest` theme `#8FB09F`／bg `#F2EFE8`、icons 192／512／svg、`sw.js` NetworkFirst GET `/api`）
-- [x] 主色 `#8FB09F`；底欄對齊 Doop（帳本／分析圖／資產／設定＋FAB）（2026-09-22 灰原哀驗收）
+- [x] Web：React Vite PWA【改 Flutter，2026-10-20：此項需在 Flutter（含 Flutter web）重驗】（2026-09-22 灰原哀驗收；`manifest.webmanifest` theme `#8FB09F`／bg `#F2EFE8`、icons 192／512／svg、`sw.js` NetworkFirst GET `/api`）
+- [x] 主色 `#8FB09F`；底欄對齊 Doop（帳本／分析圖／資產／設定＋FAB）（2026-09-22 灰原哀驗收）【改 Flutter，2026-10-20：需在 Flutter 重驗】
 
 ### B. 帳號
 - [x] 註冊 email＋密碼（argon2id）（2026-09-22 灰原哀驗收；`TestHashVerifyArgon2id`＋register）
@@ -72,8 +73,8 @@
 - [x] 開帳日（2026-09-22 灰原哀驗收）
 - [x] 各帳戶現金／信用卡欠款（2026-09-22 灰原哀驗收）
 - [x] 現倉（數量＋總成本 TWD；成本未填標示）（2026-09-22 灰原哀驗收）
-- [x] 預覽→鎖定；鎖定後不可改開帳日／快照（2026-09-22 灰原哀驗收）
-- [x] 開帳日前不可記（2026-09-22 灰原哀驗收；`TestOpeningLockWritesInOneTxAndBlocksBeforeDate` PASS）
+- [x] ~~預覽→鎖定；鎖定後不可改開帳日／快照~~ 已移除（2026-10-20 規格變更）：改為預覽→儲存、隨時可改（2026-09-22 灰原哀驗收）
+- [x] 開帳日前不可記（2026-10-20 已定保留；測試名含 Lock 需改；2026-09-22 灰原哀驗收；`TestOpeningLockWritesInOneTxAndBlocksBeforeDate` PASS）
 
 ### E. 記一筆（彈層＋四類型）
 - [x] FAB → 底部彈層（不要當底欄一級）（2026-09-22 灰原哀驗收）
