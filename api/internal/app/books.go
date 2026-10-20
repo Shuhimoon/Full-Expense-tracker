@@ -50,7 +50,7 @@ func (a *App) handleBooksCreate(w http.ResponseWriter, r *http.Request) {
 	defer tx.Rollback(r.Context())
 	var id uuid.UUID
 	err = tx.QueryRow(r.Context(),
-		`INSERT INTO books (user_id, name) VALUES ($1,$2) RETURNING id`, uid, name,
+		`INSERT INTO books (user_id, name, opening_date) VALUES ($1,$2,(now() AT TIME ZONE 'Asia/Taipei')::date) RETURNING id`, uid, name,
 	).Scan(&id)
 	if isUniqueViolation(err) {
 		writeErr(w, http.StatusConflict, "已有同名帳本")

@@ -127,10 +127,6 @@ func (a *App) handleEntriesCreate(w http.ResponseWriter, r *http.Request) {
 	if rejectArchivedWrite(w, b) {
 		return
 	}
-	if !b.OpeningLocked {
-		writeErr(w, http.StatusConflict, "請先鎖定開帳再記帳")
-		return
-	}
 	if body.Type == "opening_balance" {
 		writeErr(w, http.StatusBadRequest, "開帳分錄只能由系統寫入")
 		return
