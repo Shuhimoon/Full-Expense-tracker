@@ -5,7 +5,7 @@ import 'package:full_jizhang/pages/assets/assets_page.dart';
 import 'package:full_jizhang/pages/boot_page.dart';
 import 'package:full_jizhang/pages/home/home_page.dart';
 import 'package:full_jizhang/pages/login_page.dart';
-import 'package:full_jizhang/pages/opening/opening_stub_page.dart';
+import 'package:full_jizhang/pages/opening/opening_page.dart';
 import 'package:full_jizhang/pages/record/record_sheet.dart';
 import 'package:full_jizhang/pages/settings/backup_page.dart';
 import 'package:full_jizhang/pages/settings/books_manage_page.dart';
@@ -46,7 +46,7 @@ GoRouter createRouter(AuthController auth) {
       ),
       GoRoute(
         path: '/opening',
-        builder: (context, state) => const OpeningStubPage(),
+        builder: (context, state) => const OpeningPage(),
       ),
       ShellRoute(
         builder: (context, state, child) =>

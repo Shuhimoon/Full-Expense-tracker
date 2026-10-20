@@ -24,8 +24,8 @@ class _RecordSheetState extends State<RecordSheet> {
 
   String _type = 'expense';
   String _side = 'buy';
-  final String _assetClass = 'tw_stock';
-  final String _priceCcy = 'TWD';
+  String _assetClass = 'tw_stock';
+  String _priceCcy = 'TWD';
   String _date = taipeiToday();
   String? _accountId;
   String? _toAccountId;
@@ -554,9 +554,13 @@ class _RecordSheetState extends State<RecordSheet> {
     if (_type == 'trade') {
       rows.add(_valueRow('方向', _sideLabel(_side), onTap: _pickSide, rowKey: const Key('record-side')));
       rows.add(_valueRow('標的', _symbol.text.isEmpty ? '2330 / BTC' : _symbol.text, placeholder: _symbol.text.isEmpty, onTap: _editSymbol, rowKey: const Key('record-symbol')));
+      rows.add(_valueRow('資產類別', assetClassLabel(_assetClass), onTap: _pickAsset, rowKey: const Key('record-asset')));
       rows.add(_valueRow('數量', _qty.text.isEmpty ? '請填' : _qty.text, placeholder: _qty.text.isEmpty, onTap: _editQty, rowKey: const Key('record-qty')));
       if (_side == 'buy' || _side == 'sell') {
         rows.add(_valueRow('單價', _price.text.isEmpty ? _priceCcy : '${_price.text} $_priceCcy', placeholder: _price.text.isEmpty, onTap: _editPrice, rowKey: const Key('record-price')));
+        rows.add(_valueRow('單價幣別', _priceCcy, onTap: _pickPriceCcy, rowKey: const Key('record-price-ccy')));
+      } else {
+        rows.add(_valueRow('報價幣別', _priceCcy, onTap: _pickPriceCcy, rowKey: const Key('record-price-ccy')));
       }
       rows.add(_valueRow('帳戶', _byId(_accountId)?.name ?? '請選擇', placeholder: _accountId == null, onTap: () => _pickAccount(toAccount: false), rowKey: const Key('record-account')));
       if (_side == 'transfer') {
@@ -678,6 +682,31 @@ class _RecordSheetState extends State<RecordSheet> {
     );
     if (picked == null || !mounted) return;
     setState(() => _side = picked);
+  }
+
+  Future<void> _pickAsset() async {
+    final picked = await _pickLabel(
+      title: '資產類別',
+      options: [
+        for (final value in assetClassValues) (value, assetClassLabel(value)),
+      ],
+    );
+    if (picked == null || !mounted) return;
+    setState(() {
+      _assetClass = picked;
+      _priceCcy = defaultQuoteCurrency(picked);
+    });
+  }
+
+  Future<void> _pickPriceCcy() async {
+    final picked = await _pickLabel(
+      title: '單價幣別',
+      options: [
+        for (final value in priceCurrencyValues) (value, value),
+      ],
+    );
+    if (picked == null || !mounted) return;
+    setState(() => _priceCcy = picked);
   }
 
   Future<void> _editSymbol() async {

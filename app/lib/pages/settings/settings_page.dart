@@ -192,7 +192,8 @@ class _SettingsPageState extends State<SettingsPage> {
         ErrorLine(_error, lineKey: const Key('settings-error')),
         const SizedBox(height: 8),
         const Text(
-          '開帳後才可記一筆與看分析。多本帳本各自獨立開帳日。',
+          '新帳本可直接記帳，開帳為選填。多本帳本各自獨立開帳日。',
+          key: Key('settings-hint'),
           style: TextStyle(
             fontSize: 11,
             color: AppColors.secondary,
