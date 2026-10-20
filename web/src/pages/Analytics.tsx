@@ -16,7 +16,7 @@ export default function Analytics({ ctx }: { ctx: Ctx }) {
   const [err, setErr] = useState("");
 
   async function load(m = month) {
-    if (!book?.opening_locked) return;
+    if (!book) return;
     const [y, mo] = m.split("-").map(Number);
     let from = `${m}-01`;
     if (book.opening_date && from < book.opening_date) from = book.opening_date;
@@ -36,17 +36,6 @@ export default function Analytics({ ctx }: { ctx: Ctx }) {
   }, [book?.id, month]);
 
   if (!book) return <div className="empty">請先新增帳本</div>;
-  if (!book.opening_locked) {
-    return (
-      <>
-        <BookBar ctx={ctx} />
-        <div className="empty">
-          <h2>先開帳</h2>
-          <p className="muted">開帳後才能看分析圖</p>
-        </div>
-      </>
-    );
-  }
 
   const today = todayISO();
   const todayMonth = today.slice(0, 7);

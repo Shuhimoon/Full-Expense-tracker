@@ -23,7 +23,7 @@ export default function Home({ ctx }: { ctx: Ctx }) {
   const [feedMode, setFeedMode] = useState<"today" | "recent">("today");
 
   async function load(m = month) {
-    if (!book || !book.opening_locked) return;
+    if (!book) return;
     const [y, mo] = m.split("-").map(Number);
     let from = `${m}-01`;
     if (book.opening_date && from < book.opening_date) from = book.opening_date;
@@ -79,7 +79,7 @@ export default function Home({ ctx }: { ctx: Ctx }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [book?.id, month]);
 
-  const { pull, busy } = usePullToRefresh(refresh, !!book?.opening_locked);
+  const { pull, busy } = usePullToRefresh(refresh, !!book);
   const byDate = useMemo(() => Object.fromEntries(daily.map((d) => [d.date, d])), [daily]);
   const accName = (id?: string | null) => accounts.find((a) => a.id === id)?.name || "";
   const catName = (id?: string | null) => cats.find((c) => c.id === id)?.name || "";
@@ -102,21 +102,6 @@ export default function Home({ ctx }: { ctx: Ctx }) {
       </div>
     );
   }
-  if (!book.opening_locked) {
-    return (
-      <>
-        <BookBar ctx={ctx} />
-        <div className="empty">
-          <h2>先開帳</h2>
-          <p className="muted">用現況快照鎖定開帳日，之後才能記帳與看日曆。</p>
-          <button className="btn" onClick={() => nav("/opening")}>
-            去開帳
-          </button>
-        </div>
-      </>
-    );
-  }
-
   const today = todayISO();
   const opening = book.opening_date || "0000-01-01";
   const [y, mo] = month.split("-").map(Number);

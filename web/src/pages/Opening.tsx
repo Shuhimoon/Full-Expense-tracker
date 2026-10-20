@@ -59,7 +59,6 @@ export default function Opening({ ctx }: { ctx: Ctx }) {
   }, [book?.id]);
 
   if (!book) return <div className="empty">請先新增帳本</div>;
-  if (book.opening_locked) return <div className="empty">這本帳已鎖定開帳，開帳日與開帳數字不能改。</div>;
 
   async function addAccount() {
     if (!newName.trim()) return;
@@ -79,19 +78,19 @@ export default function Opening({ ctx }: { ctx: Ctx }) {
     await ctx.reload();
   }
 
-  async function lock(confirm = false) {
+  async function saveFinal() {
     setBusy(true);
     setErr("");
     try {
+      if (positions.some((p) => p.cost_unknown) && !window.confirm("有持倉成本未填，未實現會偏大。確定鎖定？")) {
+        return;
+      }
       await saveDraft();
-      await api.post(`/api/books/${book!.id}/opening/lock`, { confirm });
-      await ctx.reload();
       nav("/");
     } catch (e: any) {
       if (String(e.message).includes("成本未填")) {
         if (window.confirm("有持倉成本未填，未實現會偏大。確定鎖定？")) {
-          await api.post(`/api/books/${book!.id}/opening/lock`, { confirm: true });
-          await ctx.reload();
+          await saveDraft();
           nav("/");
           return;
         }
@@ -162,7 +161,7 @@ export default function Opening({ ctx }: { ctx: Ctx }) {
         {unknown && <div className="error">有持倉成本未填</div>}
         {err && <div className="error">{err}</div>}
         <button className="btn ghost block" onClick={() => saveDraft()} style={{ marginTop: 8 }}>暫存</button>
-        <button className="btn block" disabled={busy} onClick={() => lock(false)} style={{ marginTop: 8 }}>確認鎖定開帳</button>
+        <button className="btn block" disabled={busy} onClick={() => saveFinal()} style={{ marginTop: 8 }}>儲存開帳</button>
       </div>
     </>
   );

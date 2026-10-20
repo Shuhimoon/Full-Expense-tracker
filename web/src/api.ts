@@ -59,7 +59,6 @@ export type Book = {
   name: string;
   archived_at: string | null;
   opening_date: string | null;
-  opening_locked: boolean;
   version: number;
 };
 export type Account = {
