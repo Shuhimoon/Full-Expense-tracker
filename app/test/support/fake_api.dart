@@ -21,6 +21,7 @@ Book sampleBook({
   String? openingDate = '2020-01-01',
   bool archived = false,
   int version = 1,
+  String createdAt = '2026-01-01T00:00:00Z',
 }) {
   return Book(
     id: id,
@@ -31,7 +32,7 @@ Book sampleBook({
     timezone: 'Asia/Taipei',
     costMethod: 'avg',
     version: version,
-    createdAt: '2026-01-01T00:00:00Z',
+    createdAt: createdAt,
   );
 }
 
@@ -164,6 +165,12 @@ class FakeApi implements ApiClient {
   int quoteRefreshes = 0;
   int createEntryCalls = 0;
   int createTradeCalls = 0;
+  int putOpeningCalls = 0;
+  String? openingError;
+  int openingStatus = 400;
+  Map<String, dynamic>? lastOpeningBody;
+  final Map<String, List<OpeningCashDraft>> cashDrafts = {};
+  final Map<String, List<OpeningPositionDraft>> positionDrafts = {};
   int passwordCalls = 0;
   int imports = 0;
   String? createEntryError;
@@ -544,6 +551,92 @@ class FakeApi implements ApiClient {
   }
 
   @override
+  Future<OpeningSnapshot> getOpening(String bookId) async {
+    books.firstWhere((book) => book.id == bookId);
+    return _openingSnapshot(bookId);
+  }
+
+  @override
+  Future<OpeningSnapshot> putOpening({
+    required String bookId,
+    required Map<String, dynamic> body,
+  }) async {
+    putOpeningCalls++;
+    lastOpeningBody = Map<String, dynamic>.from(body);
+    final error = openingError;
+    if (error != null) throw ApiException(error, status: openingStatus);
+    final date = body['opening_date'];
+    if (date is String && date.isNotEmpty) {
+      _replaceBook(bookId, (book) => _copyBook(book, openingDate: date));
+    }
+    final book = books.firstWhere((item) => item.id == bookId);
+    final openingDate = book.openingDate ?? taipeiToday();
+    if (body['accounts'] is List) {
+      final drafts = <OpeningCashDraft>[
+        for (final raw in body['accounts'] as List)
+          if (raw is Map)
+            OpeningCashDraft(
+              accountId: '${raw['account_id']}',
+              amount: raw['amount'] is int
+                  ? raw['amount'] as int
+                  : int.tryParse('${raw['amount']}') ?? 0,
+            ),
+      ];
+      cashDrafts[bookId] = drafts;
+      entries = [
+        ...entries.where(
+          (entry) => entry.bookId != bookId || entry.type != 'opening_balance',
+        ),
+        for (final draft in drafts)
+          Entry(
+            id: _id('e'),
+            bookId: bookId,
+            date: openingDate,
+            type: 'opening_balance',
+            amount: draft.amount,
+            accountId: draft.accountId,
+            toAccountId: null,
+            categoryId: null,
+            note: '開帳',
+            createdAt: DateTime.now().toUtc().toIso8601String(),
+            version: 1,
+          ),
+      ];
+    }
+    if (body['positions'] is List) {
+      positionDrafts[bookId] = [
+        for (final raw in body['positions'] as List)
+          if (raw is Map)
+            OpeningPositionDraft(
+              accountId: '${raw['account_id']}',
+              instrumentId: raw['instrument_id']?.toString(),
+              symbol: '${raw['symbol'] ?? ''}',
+              name: '${raw['name'] ?? ''}',
+              assetClass: '${raw['asset_class'] ?? ''}',
+              quoteCurrency: '${raw['quote_currency'] ?? ''}',
+              qty: '${raw['qty'] ?? ''}',
+              costTwd: '${raw['cost_twd'] ?? ''}',
+              costUnknown: raw['cost_unknown'] == true,
+            ),
+      ];
+    }
+    return _openingSnapshot(bookId);
+  }
+
+  OpeningSnapshot _openingSnapshot(String bookId) {
+    final book = books.firstWhere((item) => item.id == bookId);
+    final drafts = positionDrafts[bookId] ?? const <OpeningPositionDraft>[];
+    return OpeningSnapshot(
+      openingDate: book.openingDate,
+      accounts: accounts.where((account) => account.bookId == bookId).toList(),
+      cashDrafts: cashDrafts[bookId] ?? const [],
+      positionDrafts: drafts,
+      previewNetWorth: 0,
+      someCostUnknown: drafts.any((draft) => draft.costUnknown),
+    );
+  }
+
+  @override
   void close() {}
 
   Book _replaceBook(String id, Book Function(Book book) update) {
@@ -567,13 +660,14 @@ class FakeApi implements ApiClient {
     String? archivedAt,
     bool clearArchived = false,
     int? version,
+    String? openingDate,
   }) {
     return Book(
       id: book.id,
       name: name ?? book.name,
       archivedAt: clearArchived ? null : (archivedAt ?? book.archivedAt),
       baseCurrency: book.baseCurrency,
-      openingDate: book.openingDate,
+      openingDate: openingDate ?? book.openingDate,
       timezone: book.timezone,
       costMethod: book.costMethod,
       version: version ?? book.version,
