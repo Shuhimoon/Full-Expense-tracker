@@ -44,6 +44,18 @@ class AuthController extends ChangeNotifier {
     _notify();
   }
 
+  void rememberBook(String? bookId) {
+    final current = user;
+    if (current == null || current.lastBookId == bookId) return;
+    user = AppUser(
+      id: current.id,
+      email: current.email,
+      lastBookId: bookId,
+      createdAt: current.createdAt,
+    );
+    _notify();
+  }
+
   void _notify() {
     if (!_disposed) notifyListeners();
   }
