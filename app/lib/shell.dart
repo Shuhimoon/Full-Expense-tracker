@@ -23,28 +23,43 @@ class AppShell extends StatelessWidget {
                   10,
                   bottom + 102,
                 ),
-                child: DecoratedBox(
-                  decoration: const BoxDecoration(
-                    color: AppColors.sheet,
-                    borderRadius: BorderRadius.vertical(
-                      top: Radius.circular(AppRadius.sheet),
-                      bottom: Radius.circular(AppRadius.sheet),
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Color(0x14000000),
-                        blurRadius: 28,
-                        offset: Offset(0, 12),
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Positioned.fill(
+                      child: DecoratedBox(
+                        decoration: const BoxDecoration(
+                          color: AppColors.sheet,
+                          borderRadius: BorderRadius.vertical(
+                            top: Radius.circular(AppRadius.sheet),
+                            bottom: Radius.circular(AppRadius.sheet),
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Color(0x14000000),
+                              blurRadius: 28,
+                              offset: Offset(0, 12),
+                            ),
+                          ],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(AppRadius.sheet),
+                            bottom: Radius.circular(AppRadius.sheet),
+                          ),
+                          child: child,
+                        ),
                       ),
-                    ],
-                  ),
-                  child: ClipRRect(
-                    borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(AppRadius.sheet),
-                      bottom: Radius.circular(AppRadius.sheet),
                     ),
-                    child: child,
-                  ),
+                    // Doop 02-home .fab: 44px circle, 12px inside the sheet corner.
+                    Positioned(
+                      right: 12,
+                      bottom: 12,
+                      child: _RecordFab(
+                        onPressed: () => context.push('/record'),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -55,7 +70,6 @@ class AppShell extends StatelessWidget {
               child: IconDock(
                 location: location,
                 onSelect: (path) => context.go(path),
-                onRecord: () => context.push('/record'),
               ),
             ),
           ],
@@ -66,23 +80,16 @@ class AppShell extends StatelessWidget {
 }
 
 class IconDock extends StatelessWidget {
-  const IconDock({
-    super.key,
-    required this.location,
-    required this.onSelect,
-    required this.onRecord,
-  });
+  const IconDock({super.key, required this.location, required this.onSelect});
 
   final String location;
   final ValueChanged<String> onSelect;
-  final VoidCallback onRecord;
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
       height: 88,
       child: Stack(
-        clipBehavior: Clip.none,
         children: [
           Positioned(
             left: 0,
@@ -92,11 +99,11 @@ class IconDock extends StatelessWidget {
               color: AppColors.sheet,
               elevation: 12,
               shadowColor: const Color(0x22000000),
-              shape: const _DockNotchBorder(),
+              shape: const StadiumBorder(),
               child: SizedBox(
                 height: 64,
                 child: Padding(
-                  padding: const EdgeInsets.only(left: 6, right: 78),
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
@@ -111,11 +118,6 @@ class IconDock extends StatelessWidget {
                 ),
               ),
             ),
-          ),
-          Positioned(
-            right: 8,
-            bottom: 28,
-            child: _RecordFab(onPressed: onRecord),
           ),
         ],
       ),
@@ -204,9 +206,9 @@ class _RecordFab extends StatelessWidget {
             customBorder: const CircleBorder(),
             onTap: onPressed,
             child: const SizedBox(
-              width: 56,
-              height: 56,
-              child: Icon(Icons.add, color: Colors.white, size: 30),
+              width: 44,
+              height: 44,
+              child: Icon(Icons.add, color: Colors.white, size: 26),
             ),
           ),
         ),
@@ -261,38 +263,3 @@ const _settings = _NavItem(
 );
 
 const _items = [_ledger, _analytics, _assets, _settings];
-
-/// Pill dock with a circular notch on the top-right for the record button.
-class _DockNotchBorder extends ShapeBorder {
-  const _DockNotchBorder();
-
-  @override
-  EdgeInsetsGeometry get dimensions => EdgeInsets.zero;
-
-  @override
-  Path getInnerPath(Rect rect, {TextDirection? textDirection}) {
-    return getOuterPath(rect, textDirection: textDirection);
-  }
-
-  @override
-  Path getOuterPath(Rect rect, {TextDirection? textDirection}) {
-    final base = Path()
-      ..addRRect(
-        RRect.fromRectAndRadius(rect, Radius.circular(rect.height / 2)),
-      );
-    final notch = Path()
-      ..addOval(
-        Rect.fromCircle(
-          center: Offset(rect.right - 36, rect.top + 8),
-          radius: 30,
-        ),
-      );
-    return Path.combine(PathOperation.difference, base, notch);
-  }
-
-  @override
-  void paint(Canvas canvas, Rect rect, {TextDirection? textDirection}) {}
-
-  @override
-  ShapeBorder scale(double t) => this;
-}

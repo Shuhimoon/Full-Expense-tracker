@@ -1,9 +1,16 @@
+import 'package:flutter/material.dart';
 import 'package:full_jizhang/auth.dart';
+import 'package:full_jizhang/pages/analytics/analytics_page.dart';
+import 'package:full_jizhang/pages/assets/assets_page.dart';
 import 'package:full_jizhang/pages/boot_page.dart';
+import 'package:full_jizhang/pages/home/home_page.dart';
 import 'package:full_jizhang/pages/login_page.dart';
-import 'package:full_jizhang/pages/placeholder_page.dart';
-import 'package:full_jizhang/pages/record_page.dart';
-import 'package:full_jizhang/pages/settings_page.dart';
+import 'package:full_jizhang/pages/opening/opening_stub_page.dart';
+import 'package:full_jizhang/pages/record/record_sheet.dart';
+import 'package:full_jizhang/pages/settings/backup_page.dart';
+import 'package:full_jizhang/pages/settings/books_manage_page.dart';
+import 'package:full_jizhang/pages/settings/categories_page.dart';
+import 'package:full_jizhang/pages/settings/settings_page.dart';
 import 'package:full_jizhang/shell.dart';
 import 'package:go_router/go_router.dart';
 
@@ -22,33 +29,55 @@ GoRouter createRouter(AuthController auth) {
     routes: [
       GoRoute(path: '/boot', builder: (context, state) => const BootPage()),
       GoRoute(path: '/login', builder: (context, state) => const LoginPage()),
-      GoRoute(path: '/record', builder: (context, state) => const RecordPage()),
+      GoRoute(
+        path: '/record',
+        pageBuilder: (context, state) {
+          return CustomTransitionPage<void>(
+            opaque: false,
+            barrierDismissible: false,
+            transitionDuration: const Duration(milliseconds: 220),
+            reverseTransitionDuration: const Duration(milliseconds: 180),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return FadeTransition(opacity: animation, child: child);
+            },
+            child: const RecordSheet(),
+          );
+        },
+      ),
+      GoRoute(
+        path: '/opening',
+        builder: (context, state) => const OpeningStubPage(),
+      ),
       ShellRoute(
         builder: (context, state, child) =>
             AppShell(location: state.uri.path, child: child),
         routes: [
-          GoRoute(
-            path: '/',
-            builder: (context, state) => const PlaceholderPage(
-              title: '帳本',
-              subtitle: '今天已花、淨資產與流水會出現在這裡。',
-            ),
-          ),
+          GoRoute(path: '/', builder: (context, state) => const HomePage()),
           GoRoute(
             path: '/analytics',
-            builder: (context, state) => const PlaceholderPage(
-              title: '分析圖',
-              subtitle: '支出、收入與分類圖會出現在這裡。',
-            ),
+            builder: (context, state) => const AnalyticsPage(),
           ),
           GoRoute(
             path: '/assets',
-            builder: (context, state) =>
-                const PlaceholderPage(title: '資產', subtitle: '帳戶與持倉會出現在這裡。'),
+            builder: (context, state) => const AssetsPage(),
           ),
           GoRoute(
             path: '/settings',
             builder: (context, state) => const SettingsPage(),
+            routes: [
+              GoRoute(
+                path: 'books',
+                builder: (context, state) => const BooksManagePage(),
+              ),
+              GoRoute(
+                path: 'categories',
+                builder: (context, state) => const CategoriesPage(),
+              ),
+              GoRoute(
+                path: 'backup',
+                builder: (context, state) => const BackupPage(),
+              ),
+            ],
           ),
         ],
       ),
