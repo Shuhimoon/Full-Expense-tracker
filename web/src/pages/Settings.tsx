@@ -155,7 +155,7 @@ export default function Settings({ ctx, onLogout }: { ctx: Ctx; onLogout: () => 
             {b.name}
             {b.id === book?.id ? "（目前）" : ""}
           </div>
-          <div className="settings-sub">{archivedRow ? "已封存" : b.opening_locked ? `已開帳 ${b.opening_date || ""}` : "尚未開帳"}</div>
+          <div className="settings-sub">{archivedRow ? "已封存" : b.opening_date ? `開帳日 ${b.opening_date}` : "開帳日"}</div>
         </div>
         <div className="settings-actions">
           {!archivedRow && b.id !== book?.id && (
@@ -223,9 +223,7 @@ export default function Settings({ ctx, onLogout }: { ctx: Ctx; onLogout: () => 
             <div className="settings-meta">
               <div className="settings-name">開始開帳</div>
               <div className="settings-sub">
-                {book?.opening_locked
-                  ? `已鎖定 ${book.opening_date || ""}`
-                  : "選開帳日 → 帳戶餘額 → 現倉 → 鎖定"}
+                {book?.opening_date ? `開帳日 ${book.opening_date}` : "開帳日"}
               </div>
             </div>
             <span className="settings-chev" aria-hidden>

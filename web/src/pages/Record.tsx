@@ -70,15 +70,6 @@ export default function Record({ ctx, asSheet }: { ctx: Ctx; asSheet?: boolean }
       </div>
     );
   }
-  if (!book.opening_locked) {
-    return (
-      <div className="empty">
-        請先開帳再記一筆
-        <div><button className="btn" onClick={() => nav("/opening")}>去開帳</button></div>
-      </div>
-    );
-  }
-
   const minDate = book.opening_date || undefined;
   const kindCats = cats.filter((c) => !c.archived_at && c.kind === (tab === "income" ? "income" : "expense"));
 
