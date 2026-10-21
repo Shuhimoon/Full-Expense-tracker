@@ -1,31 +1,38 @@
 import 'package:flutter/material.dart';
 import 'package:full_jizhang/api.dart';
 import 'package:full_jizhang/lock.dart';
+import 'package:full_jizhang/lock_screen.dart';
 import 'package:full_jizhang/pages/record/import_link_host.dart';
 import 'package:full_jizhang/router.dart';
 import 'package:full_jizhang/services/incoming_links.dart';
+import 'package:full_jizhang/services/secure_store.dart';
 import 'package:full_jizhang/session/books.dart';
 import 'package:full_jizhang/theme.dart';
-import 'package:full_jizhang/widgets/brand_mark.dart';
 import 'package:go_router/go_router.dart';
 
 /// Root widget. Owns the book session, the app lock, and the router.
 ///
 /// Production passes a LocalApi built in `main.dart`. Tests inject [api]
 /// and, when they need a deterministic gate, [lock]. [LockGate] covers every
-/// route while the lock is enabled and still locked (launch and resume).
+/// route until [LockController.ready] and whenever the session is locked
+/// (launch and resume). A fulljizhang:// link is queued by [ImportLinkHost]
+/// and the preview is built only after that gate is open.
 class FullJizhangApp extends StatefulWidget {
   const FullJizhangApp({
     super.key,
     required this.api,
     this.lock,
+    this.links,
   });
 
   /// Injected in tests. Production builds a [LocalApi].
   final ApiClient api;
 
-  /// Injected in tests. Production uses device biometrics.
+  /// Injected in tests. Production uses the keystore and device biometrics.
   final LockController? lock;
+
+  /// Injected in tests. Production listens to fulljizhang:// links.
+  final IncomingLinks? links;
 
   @override
   State<FullJizhangApp> createState() => _FullJizhangAppState();
@@ -49,11 +56,18 @@ class _FullJizhangAppState extends State<FullJizhangApp> {
     _theme = buildAppTheme();
     _books = BookController(api: widget.api);
     _ownsLock = widget.lock == null;
-    // Device biometrics plus passcode. Tests pass their own controller.
-    _lock = widget.lock ?? LockController(auth: LocalDeviceAuth());
+    // Production defaults: PBKDF2 at [productionKdfIterations] via Isolate.run,
+    // secrets in the keystore, Face ID only as a shortcut over the password.
+    // Tests pass a controller with a fake store and a low iteration count.
+    _lock = widget.lock ??
+        LockController(
+          auth: LocalDeviceAuth(),
+          store: const FlutterSecureStore(),
+        );
     // Apple Pay shortcuts open fulljizhang://add. Listening does not save.
-    // The preview sheet writes only after the user confirms.
-    _links = IncomingLinks();
+    // The preview sheet writes only after the user confirms, and only after
+    // the lock gate is open. A link that arrives while locked stays queued.
+    _links = widget.links ?? IncomingLinks();
     _router = createRouter(_books, navigatorKey: _navigatorKey);
     _books.reload();
     // Launch prompt. If the lock is on, the gate is up before this returns.
@@ -82,8 +96,8 @@ class _FullJizhangAppState extends State<FullJizhangApp> {
           debugShowCheckedModeBanner: false,
           builder: (context, child) {
             // The host queues the link until a book is ready and the lock
-            // is not covering the app. LockGate stays outside so the sheet
-            // cannot be tapped while locked.
+            // gate is open. LockGate stays outside the navigator so a sheet
+            // that is already up is covered on resume and cannot be tapped.
             return LockGate(
               child: ImportLinkHost(
                 links: _links,
@@ -98,10 +112,14 @@ class _FullJizhangAppState extends State<FullJizhangApp> {
   }
 }
 
-/// Full-screen lock drawn over the router while [LockController.locked].
+/// Full-screen lock drawn over the router.
 ///
-/// The child stays mounted so resume can re-lock without losing navigation,
-/// but [LockScreen] eats the hits until unlock succeeds.
+/// Purpose: the ledger stays mounted so resume can re-lock without losing
+/// the route, but the cover eats hits until unlock.
+///
+/// Rules: before [LockController.ready] the cover is [LockCover] (no
+/// password field). After that, [LockScreen] is shown only while [locked].
+/// Lock off clears [locked] in bootstrap, so the app opens straight in.
 class LockGate extends StatelessWidget {
   const LockGate({super.key, required this.child});
 
@@ -110,59 +128,17 @@ class LockGate extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final lock = LockScope.of(context);
+    // Fail closed until bootstrap proves there is no lock, and whenever
+    // a locked session is in progress (launch, resume, or a lockout).
+    final cover = !lock.ready || lock.locked;
     return Stack(
       children: [
         child,
-        // Fail closed: enabled and not yet unlocked covers the whole app.
-        if (lock.enabled && lock.locked) const Positioned.fill(child: LockScreen()),
-      ],
-    );
-  }
-}
-
-/// Unlock prompt. The button calls [LockController.unlock], which accepts
-/// Face ID, fingerprint, or the device passcode and stays up on failure.
-class LockScreen extends StatelessWidget {
-  const LockScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final text = Theme.of(context).textTheme;
-    return Material(
-      color: AppColors.background,
-      child: GlassBackground(
-        child: AppFrame(
-          child: Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const BrandMark(),
-                  const SizedBox(height: 18),
-                  Text('Full 記帳已鎖定', style: text.titleLarge),
-                  const SizedBox(height: 8),
-                  Text(
-                    '使用 Face ID、指紋或裝置密碼解鎖',
-                    style: text.bodySmall,
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 22),
-                  FilledButton(
-                    key: const Key('lock-unlock'),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: AppColors.sage,
-                      minimumSize: const Size.fromHeight(48),
-                    ),
-                    onPressed: () => LockScope.of(context).unlock(),
-                    child: const Text('解鎖'),
-                  ),
-                ],
-              ),
-            ),
+        if (cover)
+          Positioned.fill(
+            child: lock.ready ? const LockScreen() : const LockCover(),
           ),
-        ),
-      ),
+      ],
     );
   }
 }

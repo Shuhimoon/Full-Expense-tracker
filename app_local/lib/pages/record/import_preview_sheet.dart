@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:full_jizhang/api.dart';
 import 'package:full_jizhang/format.dart';
+import 'package:full_jizhang/lock.dart';
 import 'package:full_jizhang/models/ledger.dart';
 import 'package:full_jizhang/services/apple_pay_link.dart';
 import 'package:full_jizhang/services/local_api.dart';
@@ -609,7 +610,14 @@ class _Badge extends StatelessWidget {
 
 /// Loads suggestions and shows the sheet. Returns true only after a confirm
 /// that wrote at least one row. A link by itself never inserts.
-Future<bool> showApplePayImport(BuildContext context, Uri uri) async {
+///
+/// [ifLocked] runs when the lock gate closed during the database read.
+/// The host puts the URI back on its queue and does not build the sheet.
+Future<bool> showApplePayImport(
+  BuildContext context,
+  Uri uri, {
+  void Function()? ifLocked,
+}) async {
   final books = BookScope.of(context);
   final api = books.api;
   final book = books.current;
@@ -626,6 +634,17 @@ Future<bool> showApplePayImport(BuildContext context, Uri uri) async {
     final accounts = await api.listAccounts(book.id);
     final categories = await api.listCategories(book.id);
     if (!context.mounted) return false;
+    // Purpose: previewApplePay awaited the database. Resume can lock in
+    // that gap. Building the sheet then would put 匯入預覽 in the tree
+    // under the cover. Tell the host to keep the link queued instead.
+    final gate = context.getElementForInheritedWidgetOfExactType<LockScope>();
+    if (gate != null) {
+      final lock = (gate.widget as LockScope).notifier!;
+      if (!lock.ready || lock.locked) {
+        ifLocked?.call();
+        return false;
+      }
+    }
     final saved = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
