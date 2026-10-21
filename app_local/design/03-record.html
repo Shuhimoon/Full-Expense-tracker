@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=390"/>
+<title>首頁＋記一筆彈層</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+*{margin:0;box-sizing:border-box}
+html,body{width:390px;height:844px;overflow:hidden;font-family:"Noto Sans TC",-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display",system-ui,sans-serif;-webkit-font-smoothing:antialiased;color:#1C1C1E;background:#F2EFE8}
+body{position:relative}
+.bg{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+.blob{position:absolute;border-radius:50%;filter:blur(52px);opacity:.45}
+.b1{width:280px;height:280px;background:#E8D5C4;top:-60px;left:-80px}
+.b2{width:240px;height:240px;background:#B8C9C0;top:280px;right:-90px}
+.b3{width:260px;height:260px;background:#D4C4B0;bottom:80px;left:20px}
+.phone{position:relative;z-index:1;height:100%;padding:0 14px 0;display:flex;flex-direction:column}
+.status{height:54px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 10px 8px;font-size:15px;font-weight:600;flex-shrink:0}
+.status .r{font-size:12px;font-weight:500;letter-spacing:.4px;opacity:.85}
+:root{--sand:#FFFCFA;--dock:#FFFCFA;--sage:#8FB09F;--sage-d:#5F8574}
+.stage{position:relative;flex:1;min-height:0;display:flex;flex-direction:column;margin:0 2px}
+.sheet{position:relative;flex:1;min-height:0;z-index:2;filter:drop-shadow(0 10px 22px rgba(60,40,20,.08))}
+.sheet-body{height:100%;overflow:hidden;border-radius:28px 28px 32px 32px;background:var(--sand);border:1px solid rgba(255,255,255,.55);padding:8px 12px 48px;display:flex;flex-direction:column;gap:6px;position:relative}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:0 2px 2px}
+.book{display:inline-flex;align-items:center;gap:4px;padding:5px 10px;border-radius:999px;background:rgba(255,255,255,.72);border:1px solid rgba(0,0,0,.04)}
+.book strong{font-size:15px;font-weight:600}
+.quote{font-size:11px;color:#8E8E93}
+.card{border-radius:16px;background:rgba(255,255,255,.78);border:1px solid rgba(0,0,0,.03);box-shadow:0 4px 14px rgba(60,40,20,.04);padding:10px 12px}
+.spend .lbl,.net .lbl{font-size:12px;color:#8E8E93;font-weight:500}
+.spend .row{display:flex;align-items:baseline;justify-content:space-between;margin-top:2px}
+.spend .amt{font-size:26px;font-weight:700;letter-spacing:-1px;color:var(--sage)}
+.spend .month{font-size:12px;color:#8E8E93;text-align:right}
+.spend .month b{display:block;color:#1C1C1E;font-size:14px;font-weight:600;margin-top:2px}
+.net .amt{font-size:22px;font-weight:700;letter-spacing:-.5px;margin-top:2px}
+.net .delta{margin-top:2px;font-size:11px;color:#34C759;font-weight:500}
+.net .sub{margin-top:6px;font-size:10px;color:#8E8E93;padding-top:6px;border-top:.5px solid rgba(60,60,67,.1)}
+.cal-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+.cal-h h2{font-size:14px;font-weight:600}
+.nav-mini{display:flex;gap:4px}
+.nav-mini span{width:22px;height:22px;border-radius:7px;background:rgba(118,118,128,.1);display:flex;align-items:center;justify-content:center;font-size:12px}
+.dow{display:grid;grid-template-columns:repeat(7,1fr);text-align:center;font-size:9px;color:#8E8E93;margin-bottom:2px;font-weight:500}
+.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:0}
+.day{min-height:28px;padding:2px 1px;text-align:center;border-radius:7px}
+.day .n{font-size:12px;font-weight:500}
+.day .m{font-size:7px;color:var(--sage);font-weight:600;margin-top:0}
+.day.mute .n{color:#C7C7CC}
+.day.mute .m{display:none}
+.day.today{background:rgba(143,176,159,.18);box-shadow:inset 0 0 0 1.5px rgba(143,176,159,.55)}
+.day.today .n{color:var(--sage-d);font-weight:700}
+.ledger .led-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+.ledger h2{font-size:14px;font-weight:600}
+.ledger .more{font-size:12px;font-weight:500;color:var(--sage-d)}
+.tx{display:flex;align-items:center;gap:10px;padding:7px 0}
+.tx+.tx{border-top:.5px solid rgba(60,60,67,.1)}
+.tico{width:32px;height:32px;border-radius:9px;background:rgba(143,176,159,.14);flex-shrink:0}
+.tmeta{flex:1;min-width:0}
+.tname{font-size:14px;font-weight:600}
+.tsub{font-size:11px;color:#8E8E93;margin-top:1px}
+.tamt{font-size:14px;font-weight:600}
+.tamt.out{color:#8B1A3A}
+
+.fab{position:absolute;right:12px;bottom:12px;z-index:6;width:44px;height:44px;border-radius:50%;border:0;background:#F2EFE8;display:flex;align-items:center;justify-content:center;padding:0;box-shadow:0 0 0 3px rgba(143,176,159,.35)}
+.dock-zone{position:relative;flex-shrink:0;height:88px;margin-top:4px;z-index:3}
+.dock{position:absolute;left:0;right:0;bottom:19px;height:64px;border-radius:32px;background:var(--dock);border:1px solid rgba(255,255,255,.95);box-shadow:0 8px 20px rgba(60,40,20,.06)}
+.bridge{position:absolute;left:0;top:-9px;width:32px;height:14px;transform:translateX(16px);pointer-events:none;z-index:4}
+.bridge svg{display:block;width:32px;height:14px;overflow:visible}
+.icons{position:absolute;left:0;right:0;bottom:27px;z-index:5;display:flex;align-items:center;justify-content:center;padding:0 26px;pointer-events:none}
+.icons-inner{display:flex;align-items:center;justify-content:space-between;width:268px;height:44px}
+.tab{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;border:0;background:transparent;padding:0}
+.tab img{opacity:.45}
+.tab.on img{opacity:1}
+.tab.on{transform:translateY(-1px)}
+.hi{position:absolute;left:50%;bottom:7px;transform:translateX(-50%);width:120px;height:4px;border-radius:2px;background:rgba(0,0,0,.14);z-index:6}
+
+/* Overlay */
+.scrim{position:absolute;inset:0;z-index:20;background:rgba(28,28,30,.22);pointer-events:none}
+.state-badge{position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:40;padding:5px 12px;border-radius:999px;background:rgba(255,252,250,.92);border:1px solid rgba(143,176,159,.35);box-shadow:0 4px 14px rgba(60,40,20,.1);font-size:11px;font-weight:600;color:var(--sage-d);letter-spacing:.2px;white-space:nowrap}
+.add-sheet{position:absolute;left:22px;right:22px;top:72px;z-index:30;border-radius:26px;background:var(--sand);border:1px solid rgba(255,255,255,.85);box-shadow:0 18px 48px rgba(40,30,20,.18),0 4px 12px rgba(40,30,20,.08),inset 0 1px 0 rgba(255,255,255,.95);padding:10px 14px 14px;display:flex;flex-direction:column;gap:8px;max-height:calc(100% - 168px)}
+.add-nav{display:flex;align-items:center;justify-content:space-between;padding:2px 2px 4px}
+.add-nav .side{font-size:16px;color:var(--sage);font-weight:500;min-width:48px}
+.add-nav .side.r{text-align:right}
+.add-nav h1{font-size:17px;font-weight:600}
+.types{display:flex;gap:0;padding:3px;border-radius:12px;background:rgba(118,118,128,.12)}
+.types span{flex:1;height:30px;border-radius:10px;font-size:12px;font-weight:600;color:#8E8E93;display:flex;align-items:center;justify-content:center}
+.types span.on{background:rgba(255,255,255,.95);color:var(--sage);box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.add-sheet .amount{text-align:center;padding:2px 0 4px}
+.add-sheet .amount .cur{font-size:13px;color:#8E8E93;font-weight:500;margin-bottom:1px}
+.add-sheet .amount .num{font-size:36px;font-weight:700;letter-spacing:-1.5px;color:var(--sage);line-height:1.1}
+.glass{border-radius:16px;background:rgba(255,255,255,.62);border:1px solid rgba(255,255,255,.78);box-shadow:0 8px 24px rgba(60,40,20,.06),inset 0 1px 0 rgba(255,255,255,.9);backdrop-filter:blur(20px) saturate(160%);-webkit-backdrop-filter:blur(20px) saturate(160%);overflow:hidden}
+.add-sheet .row{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;min-height:40px}
+.add-sheet .row+.row{border-top:.5px solid rgba(60,60,67,.12)}
+.add-sheet .row .k{font-size:14px;color:#8E8E93;font-weight:500}
+.add-sheet .row .v{font-size:14px;color:#1C1C1E;font-weight:500;display:flex;align-items:center;gap:4px}
+.add-sheet .row .v.ph{color:#C7C7CC;font-weight:400}
+.add-sheet .row .chev{opacity:.4;font-size:16px;color:#8E8E93}
+.cta{margin-top:2px;height:44px;border:0;border-radius:12px;width:100%;background:linear-gradient(180deg,#A5C4B5,#8FB09F);color:#fff;font-size:16px;font-weight:600;font-family:inherit;box-shadow:0 8px 24px rgba(143,176,159,.28),inset 0 1px 0 rgba(255,255,255,.25)}
+</style></head><body data-freeze data-tab="0">
+<div class="bg"><div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div></div>
+<div class="phone">
+  <div class="status"><span>9:41</span><span class="r">●●●● Wi‑Fi ▮</span></div>
+  <div class="stage">
+    <div class="sheet">
+      <div class="sheet-body">
+        <div class="topbar">
+          <div class="book"><strong>生活</strong><img src="https://api.iconify.design/material-symbols/keyboard-arrow-down-rounded.svg?color=%238E8E93&height=16" width="16" height="16" alt=""/></div>
+          <div class="quote">報價 09:32</div>
+        </div>
+        <div class="card spend">
+          <div class="lbl">今天已花</div>
+          <div class="row"><div class="amt">NT$480</div><div class="month">本月已花<b>NT$12,860</b></div></div>
+        </div>
+        <div class="card net">
+          <div class="lbl">淨資產</div>
+          <div class="amt">NT$1,284,620</div>
+          <div class="delta">↑ NT$18,420 · 自開帳日</div>
+          <div class="sub">持倉現值 NT$642,300 · 未實現 +NT$36,180</div>
+        </div>
+        <div class="card cal">
+          <div class="cal-h"><h2>2026 年 9 月</h2><div class="nav-mini"><span>‹</span><span>›</span></div></div>
+          <div class="dow"><span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span></div>
+          <div class="grid">
+            <div class="day mute"><div class="n">30</div></div>
+            <div class="day"><div class="n">1</div><div class="m">320</div></div>
+            <div class="day"><div class="n">2</div><div class="m">180</div></div>
+            <div class="day"><div class="n">3</div><div class="m">1.2萬</div></div>
+            <div class="day today"><div class="n">4</div><div class="m">480</div></div>
+            <div class="day"><div class="n">5</div></div>
+            <div class="day"><div class="n">6</div></div>
+            <div class="day"><div class="n">7</div></div>
+            <div class="day"><div class="n">8</div></div>
+            <div class="day"><div class="n">9</div></div>
+            <div class="day"><div class="n">10</div></div>
+            <div class="day"><div class="n">11</div></div>
+            <div class="day"><div class="n">12</div></div>
+            <div class="day"><div class="n">13</div></div>
+            <div class="day"><div class="n">14</div></div>
+          </div>
+        </div>
+        <div class="card ledger"><div class="led-h"><h2>今天流水</h2><span class="more">全部</span></div><div class="tx"><div class="tico"></div><div class="tmeta"><div class="tname">午餐 · 麵店</div><div class="tsub">現金 · 餐飲</div></div><div class="tamt out">−180</div></div><div class="tx"><div class="tico"></div><div class="tmeta"><div class="tname">捷運</div><div class="tsub">台灣銀行 · 交通</div></div><div class="tamt out">−65</div></div><div class="tx"><div class="tico"></div><div class="tmeta"><div class="tname">咖啡</div><div class="tsub">玉山卡 · 餐飲</div></div><div class="tamt out">−145</div></div></div>
+        <button type="button" class="fab" aria-label="記一筆"><img src="https://api.iconify.design/ic/outline-plus.svg?color=%238FB09F&height=26" width="26" height="26" alt="＋"/></button>
+      </div>
+    </div>
+    <div class="dock-zone" id="foot">
+      <div class="dock" aria-hidden="true"></div>
+      <div class="bridge" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 14" width="32" height="14" preserveAspectRatio="none"><path fill="#FFFCFA" d="M25.0486 1.4497e-07C25.0486 1.4497e-07 20.3636 0.869539 20.3636 7C20.3636 13.1305 32 14 32 14L0 14C0 14 11.6364 13.1305 11.6364 7C11.6364 0.869539 6.95136 -1.07942e-06 6.95136 -1.07942e-06L25.0486 1.4497e-07Z"/></svg></div>
+      <div class="icons"><div class="icons-inner" role="tablist">
+        <button type="button" class="tab on" aria-label="帳本"><img src="https://api.iconify.design/material-symbols/book-outline-rounded.svg?color=%235F8574&height=24" width="24" height="24" alt=""/></button>
+        <button type="button" class="tab" aria-label="分析圖"><img src="https://api.iconify.design/material-symbols/pie-chart-outline.svg?color=%238E8E93&height=24" width="24" height="24" alt=""/></button>
+        <button type="button" class="tab" aria-label="資產"><img src="https://api.iconify.design/material-symbols/wallet-outline.svg?color=%238E8E93&height=24" width="24" height="24" alt=""/></button>
+        <button type="button" class="tab" aria-label="設定"><img src="https://api.iconify.design/material-symbols/robot-2-outline-rounded.svg?color=%238E8E93&height=24" width="24" height="24" alt=""/></button>
+      </div></div>
+    </div>
+  </div>
+  <div class="hi"></div>
+</div>
+<!-- Overlay ON -->
+<div class="scrim" aria-hidden="true"></div>
+<div class="state-badge">開啟態 · 點＋彈出</div>
+<div class="add-sheet" role="dialog" aria-label="記一筆">
+  <div class="add-nav">
+    <span class="side">取消</span>
+    <h1>記一筆</h1>
+    <span class="side r">完成</span>
+  </div>
+  <div class="types">
+    <span class="on">支出</span>
+    <span>收入</span>
+    <span>轉帳</span>
+    <span>成交</span>
+  </div>
+  <div class="amount">
+    <div class="cur">TWD</div>
+    <div class="num">180</div>
+  </div>
+  <div class="glass">
+    <div class="row"><span class="k">帳戶</span><span class="v">中信活存 <span class="chev">›</span></span></div>
+    <div class="row"><span class="k">分類</span><span class="v">餐飲 <span class="chev">›</span></span></div>
+    <div class="row"><span class="k">日期</span><span class="v">今天 · 9/4 <span class="chev">›</span></span></div>
+    <div class="row"><span class="k">備註</span><span class="v ph">午餐（可空） <span class="chev">›</span></span></div>
+  </div>
+  <button class="cta" type="button">存檔</button>
+</div>
+</body>
+</html>

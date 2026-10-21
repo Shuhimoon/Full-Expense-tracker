@@ -1,0 +1,94 @@
+<!DOCTYPE html><html lang="zh-Hant"><head><meta charset="utf-8"/><meta name="viewport" content="width=390"/><title>分析 · 分析圖</title><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet"/><style>
+*{margin:0;box-sizing:border-box}
+html,body{width:390px;height:844px;overflow:hidden;font-family:"Noto Sans TC",-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display",system-ui,sans-serif;-webkit-font-smoothing:antialiased;color:#1C1C1E;background:#F2EFE8}
+body{position:relative}
+.bg{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+.blob{position:absolute;border-radius:50%;filter:blur(52px);opacity:.45}
+.b1{width:280px;height:280px;background:#E8D5C4;top:-60px;left:-80px}
+.b2{width:240px;height:240px;background:#B8C9C0;top:280px;right:-90px}
+.b3{width:260px;height:260px;background:#D4C4B0;bottom:80px;left:20px}
+.phone{position:relative;z-index:1;height:100%;padding:0 14px 0;display:flex;flex-direction:column}
+.status{height:54px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 10px 8px;font-size:15px;font-weight:600;flex-shrink:0}
+.status .r{font-size:12px;font-weight:500;letter-spacing:.4px;opacity:.85}
+:root{--sand:#FFFCFA;--dock:#FFFCFA;--sage:#8FB09F;--sage-d:#5F8574}
+.stage{position:relative;flex:1;min-height:0;display:flex;flex-direction:column;margin:0 2px}
+.sheet{position:relative;flex:1;min-height:0;z-index:2;filter:drop-shadow(0 10px 22px rgba(60,40,20,.08))}
+.sheet-body{height:100%;overflow:hidden;border-radius:28px 28px 32px 32px;background:var(--sand);border:1px solid rgba(255,255,255,.55);padding:8px 14px 48px;display:flex;flex-direction:column;gap:8px;position:relative}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:2px 2px 4px}
+.topbar h1{font-size:28px;font-weight:700;letter-spacing:-.5px}
+.period{display:inline-flex;align-items:center;gap:2px;padding:6px 12px;border-radius:999px;background:rgba(255,255,255,.72);border:1px solid rgba(0,0,0,.04);font-size:13px;font-weight:600;color:#1C1C1E}
+.card{border-radius:16px;background:rgba(255,255,255,.78);border:1px solid rgba(0,0,0,.03);box-shadow:0 4px 14px rgba(60,40,20,.04);padding:12px 14px}
+.card h2{font-size:14px;font-weight:600;margin-bottom:8px}
+.card .sub{font-size:11px;color:#8E8E93;font-weight:500;margin:-4px 0 8px}
+.line-wrap{height:100px}
+.pie-row{display:flex;align-items:center;gap:14px;margin-top:4px}
+.legend{flex:1;display:flex;flex-direction:column;gap:6px}
+.leg{display:flex;align-items:center;gap:8px;font-size:12px}
+.dot{width:9px;height:9px;border-radius:3px;flex-shrink:0}
+.leg .name{flex:1;font-weight:500}
+.leg .meta{color:#8E8E93;font-size:11px;font-weight:500}
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:10px 12px 12px;gap:5px}
+.empty .illu{width:52px;height:52px;border-radius:50%;background:rgba(143,176,159,.12);display:flex;align-items:center;justify-content:center;margin-bottom:0}
+.empty .tag{align-self:flex-start;font-size:10px;font-weight:600;color:var(--sage-d);background:rgba(143,176,159,.16);padding:3px 8px;border-radius:999px;margin-bottom:2px}
+.empty p{font-size:14px;font-weight:600;color:#1C1C1E}
+.empty .hint{font-size:12px;color:#8E8E93;font-weight:400;line-height:1.4}
+.cta{margin-top:4px;display:inline-flex;align-items:center;justify-content:center;gap:4px;padding:8px 18px;border-radius:999px;background:var(--sage);color:#FFFFFF;font-family:"Noto Sans TC",-apple-system,sans-serif;font-size:13px;font-weight:600;border:0;-webkit-appearance:none;appearance:none}
+.fab{position:absolute;right:12px;bottom:12px;z-index:6;width:44px;height:44px;border-radius:50%;border:0;background:#F2EFE8;display:flex;align-items:center;justify-content:center;padding:0;cursor:pointer;box-shadow:none}
+.dock-zone{position:relative;flex-shrink:0;height:88px;margin-top:4px;z-index:3}
+.dock{position:absolute;left:0;right:0;bottom:19px;height:64px;border-radius:32px;background:var(--dock);border:1px solid rgba(255,255,255,.95);box-shadow:0 8px 20px rgba(60,40,20,.06)}
+.bridge{position:absolute;left:0;top:-9px;width:32px;height:14px;transform:translateX(var(--bx, 16px));transition:transform .55s cubic-bezier(.34,1.25,.48,1);pointer-events:none;z-index:4}
+.bridge svg{display:block;width:32px;height:14px;overflow:visible}
+.icons{position:absolute;left:0;right:0;bottom:27px;z-index:5;display:flex;align-items:center;justify-content:center;padding:0 26px;pointer-events:none}
+.icons-inner{display:flex;align-items:center;justify-content:space-between;width:268px;height:44px;pointer-events:auto}
+.tab{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;border:0;background:transparent;cursor:pointer;padding:0;transition:transform .35s cubic-bezier(.34,1.2,.48,1)}
+.tab img{opacity:.45;transition:opacity .35s ease;pointer-events:none}
+.tab.on img{opacity:1}
+.tab.on{transform:translateY(-1px)}
+.hi{position:absolute;left:50%;bottom:7px;transform:translateX(-50%);width:120px;height:4px;border-radius:2px;background:rgba(0,0,0,.14);z-index:6}
+.axis{display:flex;justify-content:space-between;padding:2px 4px 0;font-size:10px;color:#AEAEB2;font-weight:500}
+.trend .head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}
+.trend h2{font-size:14px;font-weight:600;margin:0}
+.pills{display:flex;gap:3px;padding:2px;border-radius:8px;background:rgba(118,118,128,.12);flex-shrink:0}
+.pills button{font:inherit;font-size:10px;font-weight:600;padding:4px 7px;border-radius:6px;color:#8E8E93;border:0;background:transparent;cursor:pointer;white-space:nowrap}
+.pills button.on{background:#fff;color:#1C1C1E;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.trend .sub{margin:-2px 0 8px}
+</style></head><body data-tab="1" data-freeze><div class="bg"><div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div></div><div class="phone"><div class="status"><span>9:41</span><span class="r">●●●● Wi‑Fi ▮</span></div><div class="stage"><div class="sheet"><div class="sheet-body"><div class="topbar"><h1>分析</h1><div class="period">本月 <img src="https://api.iconify.design/material-symbols/keyboard-arrow-down-rounded.svg?color=%238E8E93&height=16" width="16" height="16" alt=""/></div></div><div class="card trend"><div class="head"><h2 id="trendTitle">支出趨勢</h2><div class="pills" role="tablist" aria-label="趨勢類型"><button type="button" class="on" data-mode="expense">支出</button><button type="button" data-mode="income">收入</button><button type="button" data-mode="cash">現金淨資產</button></div></div><div class="sub" id="trendSub">2026 年 9 月 · 日支出</div><div class="line-wrap"><svg viewBox="0 0 340 120" width="100%" height="100" preserveAspectRatio="none"><defs><linearGradient id="areaA" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#8FB09F" stop-opacity=".32"/><stop offset="100%" stop-color="#8FB09F" stop-opacity="0"/></linearGradient></defs><g stroke="rgba(60,60,67,.08)" stroke-width="1"><line x1="0" y1="20" x2="340" y2="20"/><line x1="0" y1="55" x2="340" y2="55"/><line x1="0" y1="90" x2="340" y2="90"/></g><path id="linePath" d="M12,78 L48,70 L84,74 L120,28 L156,62 L192,48 L228,88 L264,82 L300,90 L328,86" fill="none" stroke="#8FB09F" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><path id="areaPath" d="M12,78 L48,70 L84,74 L120,28 L156,62 L192,48 L228,88 L264,82 L300,90 L328,86 L328,100 L12,100 Z" fill="url(#areaA)"/><circle id="dot" cx="192" cy="48" r="4.5" fill="#fff" stroke="#5F8574" stroke-width="2.5"/></svg></div><div class="axis"><span>1</span><span>5</span><span>10</span><span>15</span><span>20</span><span>25</span><span>30</span></div></div><div class="card cats"><h2>分類佔比</h2><div class="sub">本月支出構成</div><div class="pie-row"><svg width="96" height="96" viewBox="0 0 120 120"><circle r="40" cx="60" cy="60" fill="transparent" stroke="#8FB09F" stroke-width="22" stroke-dasharray="75.4 251.3" transform="rotate(-90 60 60)"/><circle r="40" cx="60" cy="60" fill="transparent" stroke="#B5CDBF" stroke-width="22" stroke-dasharray="55.3 251.3" stroke-dashoffset="-75.4" transform="rotate(-90 60 60)"/><circle r="40" cx="60" cy="60" fill="transparent" stroke="#D4C4B0" stroke-width="22" stroke-dasharray="45.2 251.3" stroke-dashoffset="-130.7" transform="rotate(-90 60 60)"/><circle r="40" cx="60" cy="60" fill="transparent" stroke="#A8B5A0" stroke-width="22" stroke-dasharray="40.2 251.3" stroke-dashoffset="-175.9" transform="rotate(-90 60 60)"/><circle r="40" cx="60" cy="60" fill="transparent" stroke="#C5C0B8" stroke-width="22" stroke-dasharray="35.2 251.3" stroke-dashoffset="-216.1" transform="rotate(-90 60 60)"/><circle r="26" cx="60" cy="60" fill="#FFFCFA"/><text x="60" y="56" text-anchor="middle" font-size="11" font-weight="600" fill="#8E8E93" font-family="Noto Sans TC,sans-serif">總計</text><text x="60" y="72" text-anchor="middle" font-size="10" font-weight="700" fill="#1C1C1E" font-family="Noto Sans TC,sans-serif">12.8k</text></svg><div class="legend"><div class="leg"><span class="dot" style="background:#8FB09F"></span><span class="name">餐飲</span><span class="meta">30% · NT$3,858</span></div><div class="leg"><span class="dot" style="background:#B5CDBF"></span><span class="name">交通</span><span class="meta">22% · NT$2,829</span></div><div class="leg"><span class="dot" style="background:#D4C4B0"></span><span class="name">雜支</span><span class="meta">18% · NT$2,315</span></div><div class="leg"><span class="dot" style="background:#A8B5A0"></span><span class="name">娛樂</span><span class="meta">16% · NT$2,058</span></div><div class="leg"><span class="dot" style="background:#C5C0B8"></span><span class="name">其他</span><span class="meta">14% · NT$1,800</span></div></div></div></div><div class="card empty" aria-label="空狀態示意"><span class="tag">空狀態示意</span><div class="illu"><img src="https://api.iconify.design/material-symbols/receipt-long-outline-rounded.svg?color=%238FB09F&height=28" width="28" height="28" alt=""/></div><p>這個月還沒有支出</p><div class="hint">記下一筆後，趨勢與分類圖<br/>就會出現在這裡</div><button type="button" class="cta">記一筆</button></div><button type="button" class="fab" aria-label="記一筆"><img src="https://api.iconify.design/ic/outline-plus.svg?color=%238FB09F&height=26" width="26" height="26" alt="＋"/></button></div></div><div class="dock-zone" id="foot"><div class="dock" aria-hidden="true"></div><div class="bridge" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 14" width="32" height="14" preserveAspectRatio="none"><path fill="#FFFCFA" d="M25.0486 1.4497e-07C25.0486 1.4497e-07 20.3636 0.869539 20.3636 7C20.3636 13.1305 32 14 32 14L0 14C0 14 11.6364 13.1305 11.6364 7C11.6364 0.869539 6.95136 -1.07942e-06 6.95136 -1.07942e-06L25.0486 1.4497e-07Z"/></svg></div><div class="icons"><div class="icons-inner" role="tablist"><button type="button" class="tab" data-i="0" aria-label="帳本"><img src="https://api.iconify.design/material-symbols/book-outline-rounded.svg?color=%238E8E93&height=24" width="24" height="24" alt=""/></button><button type="button" class="tab on" data-i="1" aria-label="分析圖"><img src="https://api.iconify.design/material-symbols/pie-chart-outline.svg?color=%235F8574&height=24" width="24" height="24" alt=""/></button><button type="button" class="tab" data-i="2" aria-label="資產"><img src="https://api.iconify.design/material-symbols/wallet-outline.svg?color=%238E8E93&height=24" width="24" height="24" alt=""/></button><button type="button" class="tab" data-i="3" aria-label="設定"><img src="https://api.iconify.design/material-symbols/robot-2-outline-rounded.svg?color=%238E8E93&height=24" width="24" height="24" alt=""/></button></div></div></div></div><div class="hi"></div></div><script>
+(function(){
+var foot=document.getElementById('foot');
+var tabs=[].slice.call(document.querySelectorAll('.tab'));
+var BW=32;
+function select(i){
+i=((i%4)+4)%4;
+var tab=tabs[i];
+var zone=foot.getBoundingClientRect();
+var r=tab.getBoundingClientRect();
+var cx=r.left+r.width/2-zone.left;
+foot.style.setProperty('--bx', Math.round(cx-BW/2)+'px');
+tabs.forEach(function(t,j){
+var on=j===i;
+t.classList.toggle('on', on);
+var img=t.querySelector('img');
+if(img) img.src=img.src.replace(/color=%23[0-9A-Fa-f]+/,'color='+(on?'%235F8574':'%238E8E93'));
+});
+}
+tabs.forEach(function(t){ t.addEventListener('click', function(){ select(+t.dataset.i); }); });
+var start = +(document.body.getAttribute('data-tab')||1);
+select(start);
+var modes={
+expense:{title:'支出趨勢',sub:'2026 年 9 月 · 日支出',line:'M12,78 L48,70 L84,74 L120,28 L156,62 L192,48 L228,88 L264,82 L300,90 L328,86',area:'M12,78 L48,70 L84,74 L120,28 L156,62 L192,48 L228,88 L264,82 L300,90 L328,86 L328,100 L12,100 Z',cx:192,cy:48},
+income:{title:'收入趨勢',sub:'2026 年 9 月 · 日收入',line:'M12,90 L48,88 L84,86 L120,70 L156,82 L192,60 L228,78 L264,74 L300,68 L328,50',area:'M12,90 L48,88 L84,86 L120,70 L156,82 L192,60 L228,78 L264,74 L300,68 L328,50 L328,100 L12,100 Z',cx:328,cy:50},
+cash:{title:'現金淨資產',sub:'不含持倉 · 帳戶現金／負債走勢',line:'M12,70 L48,68 L84,66 L120,64 L156,58 L192,52 L228,48 L264,44 L300,40 L328,36',area:'M12,70 L48,68 L84,66 L120,64 L156,58 L192,52 L228,48 L264,44 L300,40 L328,36 L328,100 L12,100 Z',cx:328,cy:36}
+};
+var pills=[].slice.call(document.querySelectorAll('.pills button'));
+function setMode(m){
+var cfg=modes[m]||modes.expense;
+document.getElementById('trendTitle').textContent=cfg.title;
+document.getElementById('trendSub').textContent=cfg.sub;
+document.getElementById('linePath').setAttribute('d',cfg.line);
+document.getElementById('areaPath').setAttribute('d',cfg.area);
+var d=document.getElementById('dot');d.setAttribute('cx',cfg.cx);d.setAttribute('cy',cfg.cy);
+pills.forEach(function(b){b.classList.toggle('on',b.dataset.mode===m);});
+}
+pills.forEach(function(b){b.addEventListener('click',function(){setMode(b.dataset.mode);});});
+})();
+</script></body></html>
