@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:full_jizhang/api.dart';
 import 'package:full_jizhang/lock.dart';
+import 'package:full_jizhang/pages/settings/password_form.dart';
 import 'package:full_jizhang/session/books.dart';
 import 'package:full_jizhang/theme.dart';
 import 'package:full_jizhang/widgets/soft_card.dart';
@@ -9,9 +10,10 @@ import 'package:go_router/go_router.dart';
 /// Settings for the on-device ledger.
 ///
 /// Book switching, opening, categories, and backup are the same jobs as the
-/// cloud app. The lock row is local-only: it calls [LockController.setEnabled],
-/// which prompts for Face ID, fingerprint, or the device passcode and stays
-/// off if that prompt fails (fail closed). There is no account and no logout.
+/// cloud app. The lock rows are local-only. 密碼鎖 stores a salted slow
+/// hash; Face ID is a shortcut that stays disabled until that password
+/// exists, and turning the password off turns Face ID off with it. There
+/// is no account and no logout.
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
 
@@ -63,28 +65,106 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
-  /// Turns the app lock on or off.
+  /// Turns 密碼鎖 on or off.
   ///
-  /// Enabling requires a successful [LockController.setEnabled] prompt.
-  /// If the controller stays disabled, the row shows 「無法使用裝置驗證」 and
-  /// the switch snaps back because it reads [LockController.enabled].
-  Future<void> _toggleLock(bool value) async {
+  /// On asks for a new password and a confirmation. Off asks for the
+  /// current password. The switch reads [LockController.passwordEnabled],
+  /// so a cancel, a mismatch, a short password, or a wrong current
+  /// password leaves it where it was. The controller is the rule; this
+  /// method only shows the dialog and the message.
+  Future<void> _togglePassword(bool value) async {
     if (_busy) return;
+    final lock = LockScope.of(context);
     setState(() {
       _busy = true;
       _error = null;
     });
     try {
-      await LockScope.of(context).setEnabled(value);
-      if (!mounted) return;
-      if (value && !LockScope.of(context).enabled) {
-        setState(() => _error = '無法使用裝置驗證');
+      if (value) {
+        final form = await showPasswordForm(
+          context,
+          mode: PasswordFormMode.enable,
+        );
+        if (!mounted || form == null) return;
+        final result = await lock.enablePassword(form.next, form.confirmation);
+        if (!mounted) return;
+        _showLockResult(lock, result);
+      } else {
+        final form = await showPasswordForm(
+          context,
+          mode: PasswordFormMode.disable,
+        );
+        if (!mounted || form == null) return;
+        final result = await lock.disablePassword(form.current);
+        if (!mounted) return;
+        _showLockResult(lock, result);
       }
-    } catch (_) {
-      if (mounted) setState(() => _error = '無法使用裝置驗證');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  /// Replaces the hash. Current password first, then the new pair.
+  Future<void> _changePassword() async {
+    if (_busy) return;
+    final lock = LockScope.of(context);
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      final form = await showPasswordForm(
+        context,
+        mode: PasswordFormMode.change,
+      );
+      if (!mounted || form == null) return;
+      final result = await lock.changePassword(
+        current: form.current,
+        next: form.next,
+        confirmation: form.confirmation,
+      );
+      if (!mounted) return;
+      _showLockResult(lock, result);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  /// Face ID switch. Disabled in the tree when the password lock is off;
+  /// this method repeats that rule so a direct call cannot bypass it.
+  Future<void> _toggleBiometric(bool value) async {
+    if (_busy) return;
+    final lock = LockScope.of(context);
+    if (!lock.passwordEnabled) {
+      setState(() => _error = biometricNeedsPasswordMessage);
+      return;
+    }
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      final result = await lock.setBiometrics(value);
+      if (!mounted) return;
+      if (result != LockResult.ok) {
+        setState(() {
+          _error = value
+              ? biometricFailedMessage
+              : messageForLockResult(result, lockout: lock.lockoutRemaining);
+        });
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  void _showLockResult(LockController lock, LockResult result) {
+    final message = messageForLockResult(
+      result,
+      lockout: lock.lockoutRemaining,
+    );
+    if (message == null) return;
+    setState(() => _error = message);
   }
 
   @override
@@ -145,55 +225,38 @@ class _SettingsPageState extends State<SettingsPage> {
               subtitle: '匯出／匯入 JSON',
               onTap: () => context.push('/settings/backup'),
             ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              child: Row(
-                children: [
-                  Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color: const Color(0x248FB09F),
-                      borderRadius: BorderRadius.circular(9),
-                    ),
-                    child: const Icon(
-                      Icons.fingerprint,
-                      size: 18,
-                      color: AppColors.sageDark,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '應用程式鎖定',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.ink,
-                          ),
-                        ),
-                        Text(
-                          'Face ID／生物辨識／裝置密碼',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: AppColors.secondary,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Switch(
-                    key: const Key('settings-lock'),
-                    value: lock.enabled,
-                    activeThumbColor: AppColors.sageDark,
-                    onChanged: _busy ? null : _toggleLock,
-                  ),
-                ],
+            _SwitchRow(
+              icon: Icons.lock_outline,
+              title: '密碼鎖',
+              subtitle: '至少 4 個字。只存加鹽的慢雜湊，不存明文。',
+              switchKey: const Key('settings-lock'),
+              value: lock.passwordEnabled,
+              onChanged: _busy ? null : _togglePassword,
+            ),
+            if (lock.passwordEnabled)
+              _SettingsRow(
+                rowKey: const Key('settings-change-password'),
+                icon: Icons.key_outlined,
+                title: '變更密碼',
+                subtitle: '需要目前密碼',
+                enabled: !_busy,
+                onTap: _busy ? null : _changePassword,
               ),
+            _SwitchRow(
+              icon: Icons.fingerprint,
+              title: 'Face ID／生物辨識',
+              subtitle: lock.passwordEnabled
+                  ? '解鎖時先試 Face ID／指紋，失敗再輸入密碼。'
+                  : biometricNeedsPasswordMessage,
+              subtitleKey: const Key('settings-biometric-hint'),
+              switchKey: const Key('settings-biometric'),
+              value: lock.biometricsEnabled,
+              // Rule: the control is inert until 密碼鎖 is on. The hint
+              // above is the explanation. Turning the password off clears
+              // the flag, so this value drops with it.
+              onChanged: _busy || !lock.passwordEnabled
+                  ? null
+                  : _toggleBiometric,
             ),
           ],
         ),
@@ -230,6 +293,82 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// A settings row with a switch instead of a chevron.
+///
+/// Purpose: 密碼鎖 and Face ID share one layout. [onChanged] null disables
+/// the switch (Face ID while the password lock is off, or while a hash
+/// is still running).
+class _SwitchRow extends StatelessWidget {
+  const _SwitchRow({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.switchKey,
+    required this.value,
+    required this.onChanged,
+    this.subtitleKey,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final Key switchKey;
+  final bool value;
+  final ValueChanged<bool>? onChanged;
+  final Key? subtitleKey;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      child: Row(
+        children: [
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: const Color(0x248FB09F),
+              borderRadius: BorderRadius.circular(9),
+            ),
+            child: Icon(icon, size: 18, color: AppColors.sageDark),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.ink,
+                  ),
+                ),
+                Text(
+                  subtitle,
+                  key: subtitleKey,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.secondary,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Switch(
+            key: switchKey,
+            value: value,
+            activeThumbColor: AppColors.sageDark,
+            onChanged: onChanged,
+          ),
+        ],
+      ),
     );
   }
 }

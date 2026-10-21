@@ -4,6 +4,7 @@ import 'package:full_jizhang/app.dart';
 import 'package:full_jizhang/data/database.dart';
 import 'package:full_jizhang/lock.dart';
 import 'package:full_jizhang/services/local_api.dart';
+import 'package:full_jizhang/services/secure_store.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -22,8 +23,12 @@ void main() {
     final db = AppDatabase.memory();
     addTearDown(db.close);
     final api = LocalApi(db);
+    // Memory store: this test must not touch the platform keystore.
+    // Empty store and no legacy flag means the lock is off, so bootstrap
+    // clears the fail-closed cover and the ledger shows with no login.
     final lock = LockController(
       auth: AlwaysAllowAuth(),
+      store: MemorySecureStore(),
       observeLifecycle: false,
     );
     tester.view.physicalSize = const Size(390, 844);
