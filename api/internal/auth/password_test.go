@@ -2,6 +2,7 @@ package auth
 
 import "testing"
 
+// 密碼以 argon2id 雜湊存放（前綴 $argon2id$）。正確密碼可驗證，錯誤密碼必須失敗。
 func TestHashVerifyArgon2id(t *testing.T) {
 	h, err := Hash("password123")
 	if err != nil {
