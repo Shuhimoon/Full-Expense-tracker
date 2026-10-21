@@ -1,0 +1,83 @@
+<!DOCTYPE html><html lang="zh-Hant"><head><meta charset="utf-8"/><meta name="viewport" content="width=390"/><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet"/><style>
+*{margin:0;box-sizing:border-box}
+html,body{width:390px;height:844px;overflow:hidden;font-family:"Noto Sans TC",-apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;-webkit-font-smoothing:antialiased;color:#1C1C1E;background:#F2EFE8}
+body{position:relative}
+.bg{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+.blob{position:absolute;border-radius:50%;filter:blur(52px);opacity:.45}
+.b1{width:280px;height:280px;background:#E8D5C4;top:-60px;left:-80px}
+.b2{width:240px;height:240px;background:#B8C9C0;top:280px;right:-90px}
+.b3{width:260px;height:260px;background:#D4C4B0;bottom:80px;left:20px}
+.phone{position:relative;z-index:1;height:100%;padding:0 14px 0;display:flex;flex-direction:column}
+.status{height:54px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 10px 8px;font-size:15px;font-weight:600;flex-shrink:0}
+.status .r{font-size:12px;font-weight:500;letter-spacing:.4px;opacity:.85}
+:root{--sand:#FFFCFA;--sage:#8FB09F;--sage-d:#5F8574}
+.stage{position:relative;flex:1;min-height:0;display:flex;flex-direction:column;margin:0 2px 18px}
+.sheet{position:relative;flex:1;min-height:0;z-index:2;filter:drop-shadow(0 10px 22px rgba(60,40,20,.08))}
+.sheet-body{height:100%;overflow:hidden;border-radius:28px;background:var(--sand);border:1px solid rgba(255,255,255,.55);padding:10px 14px 16px;display:flex;flex-direction:column;gap:8px;position:relative}
+.nav{display:flex;align-items:center;gap:8px;padding:2px 0 2px}
+.back{width:32px;height:32px;border-radius:10px;border:0;background:rgba(143,176,159,.14);display:flex;align-items:center;justify-content:center;padding:0;flex-shrink:0}
+.nav .title{flex:1;min-width:0}
+.nav h1{font-size:20px;font-weight:700;letter-spacing:-.3px;line-height:1.2}
+.nav .step{font-size:11px;font-weight:500;color:#8E8E93;margin-top:2px}
+.card{border-radius:16px;background:rgba(255,255,255,.78);border:1px solid rgba(0,0,0,.03);box-shadow:0 4px 14px rgba(60,40,20,.04);padding:10px 14px}
+.sec{font-size:13px;font-weight:600;margin-bottom:6px;display:flex;align-items:center;gap:6px}
+.foot{margin-top:auto;padding-top:6px;display:flex;flex-direction:column;gap:8px}
+.cta{height:50px;border-radius:14px;border:0;background:var(--sage-d);color:#fff;font:inherit;font-size:16px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:6px;width:100%}
+.cta.ghost{background:rgba(143,176,159,.14);color:var(--sage-d)}
+.hi{position:absolute;left:50%;bottom:7px;transform:translateX(-50%);width:120px;height:4px;border-radius:2px;background:rgba(0,0,0,.14);z-index:6}
+.stage{margin:0 2px}
+.sheet-body{border-radius:28px 28px 32px 32px;padding:8px 12px 48px;gap:6px}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:0 2px 2px}
+.book{display:inline-flex;align-items:center;gap:4px;padding:5px 10px;border-radius:999px;background:rgba(255,255,255,.72);border:1px solid rgba(0,0,0,.04)}
+.book strong{font-size:15px;font-weight:600}
+.lbl{font-size:12px;color:#8E8E93;font-weight:500}
+.amt{font-size:26px;font-weight:700;letter-spacing:-1px;color:var(--sage)}
+.tx{display:flex;align-items:center;gap:10px;padding:7px 0}.tx+.tx{border-top:.5px solid rgba(60,60,67,.1)}
+.tico{width:32px;height:32px;border-radius:9px;background:rgba(143,176,159,.14)}
+.tm{flex:1}.tn{font-size:14px;font-weight:600}.ts{font-size:11px;color:#8E8E93}.ta{font-size:14px;font-weight:600;color:#8B1A3A}
+.dock-zone{position:relative;flex-shrink:0;height:88px;margin-top:4px}
+.dock{position:absolute;left:0;right:0;bottom:19px;height:64px;border-radius:32px;background:#FFFCFA}
+.icons{position:absolute;left:0;right:0;bottom:27px;display:flex;justify-content:center}
+.icons-inner{display:flex;justify-content:space-between;width:268px}
+.icons img{opacity:.45;margin:10px}.icons img.on{opacity:1}
+.scrim{position:absolute;inset:0;z-index:20;background:rgba(28,28,30,.32)}
+.ps{position:absolute;left:0;right:0;bottom:0;z-index:30;background:var(--sand);border-radius:28px 28px 0 0;box-shadow:0 -12px 40px rgba(40,30,20,.18);padding:8px 14px 30px;display:flex;flex-direction:column;gap:8px}
+.grab{width:36px;height:5px;border-radius:3px;background:rgba(60,60,67,.2);margin:0 auto 2px}
+.ph{display:flex;align-items:center;justify-content:space-between}
+.ph h1{font-size:20px;font-weight:700}
+.chip{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:999px;background:rgba(143,176,159,.16);color:var(--sage-d);font-size:11px;font-weight:600}
+.ex{font-size:11px;color:#8E8E93}
+.it{border-radius:16px;background:rgba(255,255,255,.78);border:1px solid rgba(0,0,0,.04);box-shadow:0 4px 14px rgba(60,40,20,.04);padding:10px 12px}
+.it.on{border:1.5px solid rgba(95,133,116,.55)}
+.it.off{opacity:.62;background:rgba(242,239,232,.7)}
+.it.blk{background:rgba(139,26,58,.05);border:1px solid rgba(139,26,58,.18)}
+.top{display:flex;align-items:center;gap:10px}
+.cb{width:22px;height:22px;border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0;border:1.5px solid #C7C7CC;background:#fff}
+.cb.y{background:var(--sage-d);border-color:var(--sage-d)}
+.cb.x{background:rgba(139,26,58,.08);border-color:rgba(139,26,58,.25)}
+.m{flex:1;min-width:0}.mt{font-size:14px;font-weight:600;display:flex;align-items:center;gap:6px}.ms{font-size:11px;color:#8E8E93;margin-top:1px}
+.v{font-size:16px;font-weight:700;letter-spacing:-.3px}
+.badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:999px}
+.amb{background:rgba(232,163,23,.16);color:#A86A00}.wine{background:rgba(139,26,58,.12);color:#8B1A3A}
+.dd{display:flex;gap:8px;margin-top:8px}
+.sel{flex:1;display:flex;align-items:center;justify-content:space-between;padding:7px 10px;border-radius:10px;background:rgba(143,176,159,.10);border:1px solid rgba(143,176,159,.3)}
+.sel span{font-size:10px;color:#8E8E93;display:block}.sel b{font-size:13px;font-weight:600}
+.note{display:flex;gap:5px;align-items:center;margin-top:6px;font-size:11px;font-weight:500;color:#8E8E93}
+.blk .note{color:#8B1A3A}.off .note{color:#A86A00}
+.btns{display:flex;gap:8px;margin-top:4px}.btns .cta.ghost{flex:0 0 108px}
+</style></head><body><div class="bg"><div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div></div><div class="phone"><div class="status"><span>9:41</span><span class="r">●●●● Wi‑Fi ▮</span></div><div class="stage"><div class="sheet"><div class="sheet-body">
+<div class="topbar"><div class="book"><strong>生活</strong><img src="https://api.iconify.design/material-symbols/keyboard-arrow-down-rounded.svg?color=%238E8E93&height=16" width="16" height="16" alt=""/></div></div>
+<div class="card"><div class="lbl">今天已花</div><div class="amt">NT$480</div></div>
+<div class="card"><div class="lbl">淨資產</div><div class="amt" style="color:#1C1C1E;font-size:22px">NT$1,284,620</div></div>
+<div class="card"><div class="tx"><div class="tico"></div><div class="tm"><div class="tn">午餐 · 麵店</div><div class="ts">現金 · 餐飲</div></div><div class="ta">−180</div></div><div class="tx"><div class="tico"></div><div class="tm"><div class="tn">捷運</div><div class="ts">台灣銀行 · 交通</div></div><div class="ta">−65</div></div></div>
+</div></div><div class="dock-zone"><div class="dock"></div><div class="icons"><div class="icons-inner"><img class="on" src="https://api.iconify.design/material-symbols/book-outline-rounded.svg?color=%235F8574&height=24" width="24" height="24" alt=""/><img src="https://api.iconify.design/material-symbols/pie-chart-outline.svg?color=%238E8E93&height=24" width="24" height="24" alt=""/><img src="https://api.iconify.design/material-symbols/wallet-outline.svg?color=%238E8E93&height=24" width="24" height="24" alt=""/><img src="https://api.iconify.design/material-symbols/robot-2-outline-rounded.svg?color=%238E8E93&height=24" width="24" height="24" alt=""/></div></div></div></div></div>
+<div class="scrim"></div>
+<div class="ps" role="dialog" aria-label="匯入預覽"><div class="grab"></div>
+<div class="ph"><h1>匯入預覽</h1><span class="chip"><img src="https://api.iconify.design/material-symbols/contactless-outline-rounded.svg?color=%235F8574&height=14" width="14" height="14" alt=""/>來自 Apple Pay 捷徑</span></div>
+<div class="ex">以下為示意資料 · 勾選的筆數才會入帳</div>
+<div class="it on"><div class="top"><span class="cb y"><img src="https://api.iconify.design/material-symbols/check-rounded.svg?color=%23ffffff&height=16" width="16" height="16" alt=""/></span><div class="m"><div class="mt">全家</div><div class="ms">國泰 Cube · 10/21 08:42</div></div><div class="v">NT$185</div></div>
+<div class="dd"><div class="sel"><div><span>分類</span><b>餐飲</b></div><img src="https://api.iconify.design/material-symbols/keyboard-arrow-down-rounded.svg?color=%235F8574&height=18" width="18" height="18" alt=""/></div><div class="sel" style="flex:1.5"><div><span>帳戶</span><b>國泰 Cube 信用卡</b></div><img src="https://api.iconify.design/material-symbols/keyboard-arrow-down-rounded.svg?color=%235F8574&height=18" width="18" height="18" alt=""/></div></div></div>
+<div class="it off"><div class="top"><span class="cb"></span><div class="m"><div class="mt">全家 <span class="badge amb">已記過</span></div><div class="ms">國泰 Cube · 10/21 08:44</div></div><div class="v">NT$185</div></div><div class="note"><img src="https://api.iconify.design/material-symbols/content-copy-outline-rounded.svg?color=%23A86A00&height=14" width="14" height="14" alt=""/>同金額同商家 5 分鐘內已有一筆</div></div>
+<div class="it blk"><div class="top"><span class="cb x"><img src="https://api.iconify.design/material-symbols/block.svg?color=%238B1A3A&height=14" width="14" height="14" alt=""/></span><div class="m"><div class="mt" style="color:#8E8E93">誠品書店 <span class="badge wine">早於開帳日</span></div><div class="ms">玉山 Pi · 9/02 19:10</div></div><div class="v" style="color:#AEAEB2;text-decoration:line-through">NT$420</div></div><div class="note"><img src="https://api.iconify.design/material-symbols/do-not-disturb-on-outline-rounded.svg?color=%238B1A3A&height=14" width="14" height="14" alt=""/>開帳日 2026-09-04 之前的交易不入帳</div></div>
+<div class="btns"><button type="button" class="cta ghost">取消</button><button type="button" class="cta">確認匯入（1 筆）</button></div>
+</div><div class="hi" style="z-index:40"></div></div></body></html>

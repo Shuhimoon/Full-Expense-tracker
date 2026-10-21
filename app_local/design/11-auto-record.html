@@ -1,0 +1,56 @@
+<!DOCTYPE html><html lang="zh-Hant"><head><meta charset="utf-8"/><meta name="viewport" content="width=390"/><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet"/><style>
+*{margin:0;box-sizing:border-box}
+html,body{width:390px;height:844px;overflow:hidden;font-family:"Noto Sans TC",-apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;-webkit-font-smoothing:antialiased;color:#1C1C1E;background:#F2EFE8}
+body{position:relative}
+.bg{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+.blob{position:absolute;border-radius:50%;filter:blur(52px);opacity:.45}
+.b1{width:280px;height:280px;background:#E8D5C4;top:-60px;left:-80px}
+.b2{width:240px;height:240px;background:#B8C9C0;top:280px;right:-90px}
+.b3{width:260px;height:260px;background:#D4C4B0;bottom:80px;left:20px}
+.phone{position:relative;z-index:1;height:100%;padding:0 14px 0;display:flex;flex-direction:column}
+.status{height:54px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 10px 8px;font-size:15px;font-weight:600;flex-shrink:0}
+.status .r{font-size:12px;font-weight:500;letter-spacing:.4px;opacity:.85}
+:root{--sand:#FFFCFA;--sage:#8FB09F;--sage-d:#5F8574}
+.stage{position:relative;flex:1;min-height:0;display:flex;flex-direction:column;margin:0 2px 18px}
+.sheet{position:relative;flex:1;min-height:0;z-index:2;filter:drop-shadow(0 10px 22px rgba(60,40,20,.08))}
+.sheet-body{height:100%;overflow:hidden;border-radius:28px;background:var(--sand);border:1px solid rgba(255,255,255,.55);padding:10px 14px 16px;display:flex;flex-direction:column;gap:8px;position:relative}
+.nav{display:flex;align-items:center;gap:8px;padding:2px 0 2px}
+.back{width:32px;height:32px;border-radius:10px;border:0;background:rgba(143,176,159,.14);display:flex;align-items:center;justify-content:center;padding:0;flex-shrink:0}
+.nav .title{flex:1;min-width:0}
+.nav h1{font-size:20px;font-weight:700;letter-spacing:-.3px;line-height:1.2}
+.nav .step{font-size:11px;font-weight:500;color:#8E8E93;margin-top:2px}
+.card{border-radius:16px;background:rgba(255,255,255,.78);border:1px solid rgba(0,0,0,.03);box-shadow:0 4px 14px rgba(60,40,20,.04);padding:10px 14px}
+.sec{font-size:13px;font-weight:600;margin-bottom:6px;display:flex;align-items:center;gap:6px}
+.foot{margin-top:auto;padding-top:6px;display:flex;flex-direction:column;gap:8px}
+.cta{height:50px;border-radius:14px;border:0;background:var(--sage-d);color:#fff;font:inherit;font-size:16px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:6px;width:100%}
+.cta.ghost{background:rgba(143,176,159,.14);color:var(--sage-d)}
+.hi{position:absolute;left:50%;bottom:7px;transform:translateX(-50%);width:120px;height:4px;border-radius:2px;background:rgba(0,0,0,.14);z-index:6}
+.li{display:flex;gap:6px;align-items:flex-start;font-size:12.5px;line-height:1.4;padding:2px 0;font-weight:500}
+.li img{flex-shrink:0;margin-top:1px}
+.steps{display:flex;flex-direction:column}
+.st{display:flex;gap:10px;align-items:flex-start;padding:5px 0}
+.st+.st{border-top:.5px solid rgba(60,60,67,.1)}
+.n{width:20px;height:20px;border-radius:50%;background:rgba(143,176,159,.18);color:var(--sage-d);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.st p{font-size:12.5px;line-height:1.4;font-weight:500}
+.st p small{display:block;font-size:11px;color:#8E8E93;font-weight:400}
+.url{display:flex;align-items:center;gap:8px;padding:8px 8px 8px 12px;border-radius:12px;background:rgba(143,176,159,.10);border:1px dashed rgba(95,133,116,.4)}
+.url code{flex:1;min-width:0;font-family:ui-monospace,Menlo,monospace;font-size:11px;line-height:1.4;color:var(--sage-d);word-break:break-all}
+.copy{width:34px;height:34px;border-radius:10px;border:0;background:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+</style></head><body><div class="bg"><div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div></div><div class="phone"><div class="status"><span>9:41</span><span class="r">●●●● Wi‑Fi ▮</span></div><div class="stage"><div class="sheet"><div class="sheet-body"><div class="nav"><button type="button" class="back" aria-label="返回"><img src="https://api.iconify.design/material-symbols/arrow-back-ios-new-rounded.svg?color=%235F8574&height=16" width="16" height="16" alt=""/></button><div class="title"><h1>自動記帳</h1><div class="step">設定 · Apple Pay 付款後自動帶入</div></div></div>
+<div class="card"><div class="sec"><img src="https://api.iconify.design/material-symbols/verified-outline-rounded.svg?color=%235F8574&height=16" width="16" height="16" alt=""/>支援範圍</div>
+<div class="li"><img src="https://api.iconify.design/material-symbols/check-rounded.svg?color=%235F8574&height=16" width="16" height="16" alt=""/>iOS 17 以上</div>
+<div class="li"><img src="https://api.iconify.design/material-symbols/check-rounded.svg?color=%235F8574&height=16" width="16" height="16" alt=""/>iPhone XS、XR、SE 第 2 代以後</div>
+<div class="li"><img src="https://api.iconify.design/material-symbols/check-rounded.svg?color=%235F8574&height=16" width="16" height="16" alt=""/>需設定 Apple Pay</div>
+<div class="li"><img src="https://api.iconify.design/material-symbols/check-rounded.svg?color=%235F8574&height=16" width="16" height="16" alt=""/>只有實體店感應付款會觸發</div>
+<div class="li"><img src="https://api.iconify.design/material-symbols/check-rounded.svg?color=%235F8574&height=16" width="16" height="16" alt=""/>Wallet 需開啟行動數據</div></div>
+<div class="card"><div class="sec"><img src="https://api.iconify.design/material-symbols/bolt-outline-rounded.svg?color=%235F8574&height=16" width="16" height="16" alt=""/>設定捷徑自動化</div><div class="steps">
+<div class="st"><span class="n">1</span><p>打開「捷徑」App，點下方「自動化」</p></div>
+<div class="st"><span class="n">2</span><p>點右上「＋」→「新增個人自動化」</p></div>
+<div class="st"><span class="n">3</span><p>選「Wallet」→「點一下卡片或付款方式時」<small>勾選要自動記帳的卡片</small></p></div>
+<div class="st"><span class="n">4</span><p>加入動作「打開 URL」，貼上下方網址</p></div>
+<div class="st"><span class="n">5</span><p>設為「立即執行」</p></div>
+<div class="st"><span class="n">6</span><p>關閉「執行時通知」，完成</p></div>
+</div></div>
+<div class="url"><code>fulljizhang://add?amount=…&amp;merchant=…&amp;card=…&amp;time=…</code><button type="button" class="copy" aria-label="複製網址"><img src="https://api.iconify.design/material-symbols/content-copy-outline-rounded.svg?color=%235F8574&height=18" width="18" height="18" alt=""/></button></div>
+<div class="foot"><button type="button" class="cta"><img src="https://api.iconify.design/material-symbols/download-rounded.svg?color=%23ffffff&height=20" width="20" height="20" alt=""/>取得捷徑</button></div>
+</div></div></div><div class="hi"></div></div></body></html>

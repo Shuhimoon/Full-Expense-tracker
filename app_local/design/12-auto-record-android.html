@@ -1,0 +1,36 @@
+<!DOCTYPE html><html lang="zh-Hant"><head><meta charset="utf-8"/><meta name="viewport" content="width=390"/><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet"/><style>
+*{margin:0;box-sizing:border-box}
+html,body{width:390px;height:844px;overflow:hidden;font-family:"Noto Sans TC",-apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;-webkit-font-smoothing:antialiased;color:#1C1C1E;background:#F2EFE8}
+body{position:relative}
+.bg{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+.blob{position:absolute;border-radius:50%;filter:blur(52px);opacity:.45}
+.b1{width:280px;height:280px;background:#E8D5C4;top:-60px;left:-80px}
+.b2{width:240px;height:240px;background:#B8C9C0;top:280px;right:-90px}
+.b3{width:260px;height:260px;background:#D4C4B0;bottom:80px;left:20px}
+.phone{position:relative;z-index:1;height:100%;padding:0 14px 0;display:flex;flex-direction:column}
+.status{height:54px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 10px 8px;font-size:15px;font-weight:600;flex-shrink:0}
+.status .r{font-size:12px;font-weight:500;letter-spacing:.4px;opacity:.85}
+:root{--sand:#FFFCFA;--sage:#8FB09F;--sage-d:#5F8574}
+.stage{position:relative;flex:1;min-height:0;display:flex;flex-direction:column;margin:0 2px 18px}
+.sheet{position:relative;flex:1;min-height:0;z-index:2;filter:drop-shadow(0 10px 22px rgba(60,40,20,.08))}
+.sheet-body{height:100%;overflow:hidden;border-radius:28px;background:var(--sand);border:1px solid rgba(255,255,255,.55);padding:10px 14px 16px;display:flex;flex-direction:column;gap:8px;position:relative}
+.nav{display:flex;align-items:center;gap:8px;padding:2px 0 2px}
+.back{width:32px;height:32px;border-radius:10px;border:0;background:rgba(143,176,159,.14);display:flex;align-items:center;justify-content:center;padding:0;flex-shrink:0}
+.nav .title{flex:1;min-width:0}
+.nav h1{font-size:20px;font-weight:700;letter-spacing:-.3px;line-height:1.2}
+.nav .step{font-size:11px;font-weight:500;color:#8E8E93;margin-top:2px}
+.card{border-radius:16px;background:rgba(255,255,255,.78);border:1px solid rgba(0,0,0,.03);box-shadow:0 4px 14px rgba(60,40,20,.04);padding:10px 14px}
+.sec{font-size:13px;font-weight:600;margin-bottom:6px;display:flex;align-items:center;gap:6px}
+.foot{margin-top:auto;padding-top:6px;display:flex;flex-direction:column;gap:8px}
+.cta{height:50px;border-radius:14px;border:0;background:var(--sage-d);color:#fff;font:inherit;font-size:16px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:6px;width:100%}
+.cta.ghost{background:rgba(143,176,159,.14);color:var(--sage-d)}
+.hi{position:absolute;left:50%;bottom:7px;transform:translateX(-50%);width:120px;height:4px;border-radius:2px;background:rgba(0,0,0,.14);z-index:6}
+.empty{display:flex;flex-direction:column;align-items:center;text-align:center;padding:28px 18px 22px;gap:10px;margin-top:40px}
+.eico{width:72px;height:72px;border-radius:22px;background:rgba(143,176,159,.14);display:flex;align-items:center;justify-content:center}
+.empty h2{font-size:18px;font-weight:700}
+.empty p{font-size:13px;line-height:1.55;color:#8E8E93}
+.tag{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:999px;background:rgba(118,118,128,.1);font-size:11px;font-weight:600;color:#8E8E93}
+.empty .cta{margin-top:8px}
+</style></head><body><div class="bg"><div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div></div><div class="phone"><div class="status"><span>9:41</span><span class="r">●●●● Wi‑Fi ▮</span></div><div class="stage"><div class="sheet"><div class="sheet-body"><div class="nav"><button type="button" class="back" aria-label="返回"><img src="https://api.iconify.design/material-symbols/arrow-back-ios-new-rounded.svg?color=%235F8574&height=16" width="16" height="16" alt=""/></button><div class="title"><h1>自動記帳</h1><div class="step">設定 · Android</div></div></div>
+<div class="card empty"><div class="eico"><img src="https://api.iconify.design/material-symbols/phonelink-off-outline-rounded.svg?color=%235F8574&height=36" width="36" height="36" alt=""/></div><span class="tag"><img src="https://api.iconify.design/material-symbols/android.svg?color=%238E8E93&height=14" width="14" height="14" alt=""/>此裝置不支援</span><h2>目前只支援 iPhone</h2><p>自動記帳靠 iOS 捷徑與 Wallet 在付款時帶入資料，Android 沒有對應功能。<br/>你仍可繼續手動記一筆。</p><button type="button" class="cta ghost"><img src="https://api.iconify.design/material-symbols/add-rounded.svg?color=%235F8574&height=20" width="20" height="20" alt=""/>去記一筆</button></div>
+</div></div></div><div class="hi"></div></div></body></html>
