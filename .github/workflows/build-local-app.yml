@@ -1,0 +1,228 @@
+# Purpose: build the on-device Full 記帳 app (app_local) and upload an APK and an
+# unsigned IPA. This workflow uses no repository secrets.
+#
+# Key steps shared by both jobs:
+#   1. Check out the repository.
+#   2. Copy launcher PNGs from app/ into app_local/ (app_local gitignores them).
+#   3. Install Flutter 3.47.7 (stable) with the action cache enabled.
+#   4. From app_local/: flutter pub get, then flutter test.
+# The Android job then builds a debug-signed release APK. The iOS job builds
+# without codesign and zips Runner.app into an unsigned IPA.
+
+name: Build local app
+
+# Manual runs, plus pushes to main that touch the local app or this workflow.
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "app_local/**"
+      - ".github/workflows/build-local-app.yml"
+
+# Checkout only. Uploading artifacts does not need contents: write.
+permissions:
+  contents: read
+
+jobs:
+  # Release APK. app_local/android/app/build.gradle.kts points the release
+  # build type at signingConfigs.debug, so the APK is debug-signed and no
+  # upload keystore is required.
+  android:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        # Flutter commands run inside the local app package.
+        working-directory: app_local
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Copy launcher PNGs from app into app_local
+        # The job default is app_local/. Copy from the repo root so app/ resolves.
+        working-directory: ${{ github.workspace }}
+        shell: bash
+        run: |
+          # Purpose: app_local does not commit launcher artwork. Reuse the copies in app/.
+          # Key steps: create each destination directory, copy the Android mipmap icons
+          # and the iOS AppIcon and LaunchImage PNGs, then fail if nothing was copied.
+          set -euo pipefail
+          copied=0
+
+          # Android: mipmap-*/ic_launcher.png keeps the same path under app_local/.
+          for src in app/android/app/src/main/res/mipmap-*/ic_launcher.png; do
+            if [ ! -f "$src" ]; then
+              echo "error: no Android launcher PNG matched ($src)" >&2
+              exit 1
+            fi
+            rel="${src#app/}"
+            dest="app_local/${rel}"
+            mkdir -p "$(dirname "$dest")"
+            cp "$src" "$dest"
+            copied=$((copied + 1))
+          done
+
+          # iOS app icons into AppIcon.appiconset.
+          for src in app/ios/Runner/Assets.xcassets/AppIcon.appiconset/*.png; do
+            if [ ! -f "$src" ]; then
+              echo "error: no iOS app icon PNG matched ($src)" >&2
+              exit 1
+            fi
+            rel="${src#app/}"
+            dest="app_local/${rel}"
+            mkdir -p "$(dirname "$dest")"
+            cp "$src" "$dest"
+            copied=$((copied + 1))
+          done
+
+          # iOS launch images into LaunchImage.imageset.
+          for src in app/ios/Runner/Assets.xcassets/LaunchImage.imageset/*.png; do
+            if [ ! -f "$src" ]; then
+              echo "error: no iOS launch image PNG matched ($src)" >&2
+              exit 1
+            fi
+            rel="${src#app/}"
+            dest="app_local/${rel}"
+            mkdir -p "$(dirname "$dest")"
+            cp "$src" "$dest"
+            copied=$((copied + 1))
+          done
+
+          if [ "$copied" -eq 0 ]; then
+            echo "error: no PNG files were copied from app/ into app_local/" >&2
+            exit 1
+          fi
+          echo "Copied ${copied} PNG file(s) from app/ into app_local/."
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.7"
+          channel: stable
+          cache: true
+
+      - name: Install packages
+        run: flutter pub get
+
+      - name: Run tests
+        run: flutter test
+
+      - name: Set up Java
+        # The release APK is built with Gradle. Temurin 17 matches the app compile target.
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Build release APK
+        # Debug signing is configured in app_local; this step does not read a keystore secret.
+        run: flutter build apk --release
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: fulljizhang-local-apk
+          # Artifact paths are relative to the workspace root, not app_local/.
+          path: app_local/build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+
+  # Unsigned iOS archive. --no-codesign skips provisioning profiles and certificates.
+  ios:
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: app_local
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Copy launcher PNGs from app into app_local
+        # The job default is app_local/. Copy from the repo root so app/ resolves.
+        working-directory: ${{ github.workspace }}
+        shell: bash
+        run: |
+          # Purpose: app_local does not commit launcher artwork. Reuse the copies in app/.
+          # Key steps: create each destination directory, copy the Android mipmap icons
+          # and the iOS AppIcon and LaunchImage PNGs, then fail if nothing was copied.
+          set -euo pipefail
+          copied=0
+
+          # Android: mipmap-*/ic_launcher.png keeps the same path under app_local/.
+          for src in app/android/app/src/main/res/mipmap-*/ic_launcher.png; do
+            if [ ! -f "$src" ]; then
+              echo "error: no Android launcher PNG matched ($src)" >&2
+              exit 1
+            fi
+            rel="${src#app/}"
+            dest="app_local/${rel}"
+            mkdir -p "$(dirname "$dest")"
+            cp "$src" "$dest"
+            copied=$((copied + 1))
+          done
+
+          # iOS app icons into AppIcon.appiconset.
+          for src in app/ios/Runner/Assets.xcassets/AppIcon.appiconset/*.png; do
+            if [ ! -f "$src" ]; then
+              echo "error: no iOS app icon PNG matched ($src)" >&2
+              exit 1
+            fi
+            rel="${src#app/}"
+            dest="app_local/${rel}"
+            mkdir -p "$(dirname "$dest")"
+            cp "$src" "$dest"
+            copied=$((copied + 1))
+          done
+
+          # iOS launch images into LaunchImage.imageset.
+          for src in app/ios/Runner/Assets.xcassets/LaunchImage.imageset/*.png; do
+            if [ ! -f "$src" ]; then
+              echo "error: no iOS launch image PNG matched ($src)" >&2
+              exit 1
+            fi
+            rel="${src#app/}"
+            dest="app_local/${rel}"
+            mkdir -p "$(dirname "$dest")"
+            cp "$src" "$dest"
+            copied=$((copied + 1))
+          done
+
+          if [ "$copied" -eq 0 ]; then
+            echo "error: no PNG files were copied from app/ into app_local/" >&2
+            exit 1
+          fi
+          echo "Copied ${copied} PNG file(s) from app/ into app_local/."
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.7"
+          channel: stable
+          cache: true
+
+      - name: Install packages
+        run: flutter pub get
+
+      - name: Run tests
+        run: flutter test
+
+      - name: Build unsigned iOS release
+        run: flutter build ios --release --no-codesign
+
+      - name: Pack unsigned IPA
+        shell: bash
+        run: |
+          # Purpose: wrap the unsigned Runner.app in an IPA (a zip with a Payload/ directory).
+          # Key steps: stage Payload/Runner.app, then zip that directory.
+          set -euo pipefail
+          mkdir Payload
+          cp -R build/ios/iphoneos/Runner.app Payload/
+          zip -qry FullJizhang-unsigned.ipa Payload
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: fulljizhang-local-ipa
+          # Produced by the pack step in app_local/. The path is workspace-relative.
+          path: app_local/FullJizhang-unsigned.ipa
+          if-no-files-found: error
