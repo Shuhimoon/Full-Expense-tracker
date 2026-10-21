@@ -1,0 +1,47 @@
+<!DOCTYPE html><html lang="zh-Hant"><head><meta charset="utf-8"/><meta name="viewport" content="width=390"/><title>選開帳日</title><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet"/><style>
+*{margin:0;box-sizing:border-box}
+html,body{width:390px;height:844px;overflow:hidden;font-family:"Noto Sans TC",-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display",system-ui,sans-serif;-webkit-font-smoothing:antialiased;color:#1C1C1E;background:#F2EFE8}
+body{position:relative}
+.bg{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+.blob{position:absolute;border-radius:50%;filter:blur(52px);opacity:.45}
+.b1{width:280px;height:280px;background:#E8D5C4;top:-60px;left:-80px}
+.b2{width:240px;height:240px;background:#B8C9C0;top:280px;right:-90px}
+.b3{width:260px;height:260px;background:#D4C4B0;bottom:80px;left:20px}
+.phone{position:relative;z-index:1;height:100%;padding:0 14px 0;display:flex;flex-direction:column}
+.status{height:54px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 10px 8px;font-size:15px;font-weight:600;flex-shrink:0}
+.status .r{font-size:12px;font-weight:500;letter-spacing:.4px;opacity:.85}
+:root{--sand:#FFFCFA;--sage:#8FB09F;--sage-d:#5F8574;--wine:#8B1A3A}
+.stage{position:relative;flex:1;min-height:0;display:flex;flex-direction:column;margin:0 2px 18px}
+.sheet{position:relative;flex:1;min-height:0;z-index:2;filter:drop-shadow(0 10px 22px rgba(60,40,20,.08))}
+.sheet-body{height:100%;overflow:hidden;border-radius:28px;background:var(--sand);border:1px solid rgba(255,255,255,.55);padding:10px 14px 16px;display:flex;flex-direction:column;gap:10px;position:relative}
+.nav{display:flex;align-items:center;gap:8px;padding:2px 0 4px}
+.back{width:32px;height:32px;border-radius:10px;border:0;background:rgba(143,176,159,.14);display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;flex-shrink:0}
+.nav .title{flex:1;min-width:0}
+.nav h1{font-size:20px;font-weight:700;letter-spacing:-.3px;line-height:1.2}
+.nav .step{font-size:11px;font-weight:500;color:#8E8E93;margin-top:2px}
+.dots{display:flex;gap:6px;padding:2px 0 4px}
+.dot{height:4px;flex:1;border-radius:2px;background:rgba(143,176,159,.22)}
+.dot.on{background:var(--sage-d)}
+.card{border-radius:16px;background:rgba(255,255,255,.78);border:1px solid rgba(0,0,0,.03);box-shadow:0 4px 14px rgba(60,40,20,.04);padding:12px 14px}
+.sec{font-size:13px;font-weight:600;margin-bottom:8px}
+.hint{font-size:11px;color:#8E8E93;line-height:1.4}
+.foot{margin-top:auto;padding-top:8px;display:flex;flex-direction:column;gap:8px}
+.cta{height:50px;border-radius:14px;border:0;background:var(--sage-d);color:#fff;font:inherit;font-size:16px;font-weight:600;cursor:pointer}
+.cta.danger{background:var(--wine)}
+.cta.ghost{background:rgba(143,176,159,.14);color:var(--sage-d)}
+.hi{position:absolute;left:50%;bottom:7px;transform:translateX(-50%);width:120px;height:4px;border-radius:2px;background:rgba(0,0,0,.14);z-index:6}
+.cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.cal-head .m{font-size:16px;font-weight:700}
+.cal-head .navbtns{display:flex;gap:6px}
+.cal-head button{width:28px;height:28px;border-radius:8px;border:0;background:rgba(143,176,159,.14);display:flex;align-items:center;justify-content:center;padding:0}
+.wdays{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:4px}
+.wdays span{text-align:center;font-size:11px;font-weight:600;color:#8E8E93;padding:4px 0}
+.days{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.day{aspect-ratio:1;border-radius:12px;border:0;background:transparent;font:inherit;font-size:14px;font-weight:500;color:#1C1C1E;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.day.mute{color:#C7C7CC}
+.day.on{background:var(--sage-d);color:#fff;font-weight:700}
+.day.today{box-shadow:inset 0 0 0 1.5px rgba(95,133,116,.45)}
+.picked{margin-top:10px;display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-radius:12px;background:rgba(143,176,159,.12)}
+.picked .lbl{font-size:12px;color:#8E8E93;font-weight:500}
+.picked .val{font-size:15px;font-weight:700;color:var(--sage-d)}
+</style></head><body><div class="bg"><div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div></div><div class="phone"><div class="status"><span>9:41</span><span class="r">●●●● Wi‑Fi ▮</span></div><div class="stage"><div class="sheet"><div class="sheet-body"><div class="nav"><button type="button" class="back" aria-label="返回"><img src="https://api.iconify.design/material-symbols/arrow-back-ios-new-rounded.svg?color=%235F8574&height=16" width="16" height="16" alt=""/></button><div class="title"><h1>選開帳日</h1><div class="step">步驟 1／4 · 開帳</div></div></div><div class="dots"><div class="dot on"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div></div><div class="card"><div class="cal-head"><span class="m">2026 年 9 月</span><div class="navbtns"><button type="button" aria-label="上月"><img src="https://api.iconify.design/material-symbols/chevron-left-rounded.svg?color=%235F8574&height=18" width="18" height="18" alt=""/></button><button type="button" aria-label="下月"><img src="https://api.iconify.design/material-symbols/chevron-right-rounded.svg?color=%235F8574&height=18" width="18" height="18" alt=""/></button></div></div><div class="wdays"><span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span></div><div class="days"><button type="button" class="day mute">30</button><button type="button" class="day mute">31</button><button type="button" class="day">1</button><button type="button" class="day">2</button><button type="button" class="day">3</button><button type="button" class="day on">4</button><button type="button" class="day">5</button><button type="button" class="day">6</button><button type="button" class="day">7</button><button type="button" class="day">8</button><button type="button" class="day">9</button><button type="button" class="day">10</button><button type="button" class="day">11</button><button type="button" class="day">12</button><button type="button" class="day">13</button><button type="button" class="day">14</button><button type="button" class="day">15</button><button type="button" class="day">16</button><button type="button" class="day">17</button><button type="button" class="day">18</button><button type="button" class="day">19</button><button type="button" class="day">20</button><button type="button" class="day">21</button><button type="button" class="day">22</button><button type="button" class="day">23</button><button type="button" class="day">24</button><button type="button" class="day">25</button><button type="button" class="day">26</button><button type="button" class="day">27</button><button type="button" class="day">28</button><button type="button" class="day">29</button><button type="button" class="day">30</button><button type="button" class="day mute">1</button><button type="button" class="day mute">2</button><button type="button" class="day mute">3</button></div><div class="picked"><div><div class="lbl">開帳日</div><div class="val">2026-09-04</div></div><img src="https://api.iconify.design/material-symbols/calendar-month-outline-rounded.svg?color=%235F8574&height=22" width="22" height="22" alt=""/></div></div><p class="hint">開帳日之後才可記一筆與看分析。</p><div class="foot"><button type="button" class="cta">下一步</button></div></div></div></div><div class="hi"></div></div></body></html>
