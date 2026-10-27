@@ -358,12 +358,13 @@ class _RecordSheetState extends State<RecordSheet> {
         }
       }
       if (!mounted) return;
-      BookScope.of(context).touch();
-      if (context.canPop()) {
-        context.pop();
-      } else {
-        context.go('/');
-      }
+      // GoRouter.pop first (not Navigator.pop, and not touch() first).
+      // touch() notifies [GoRouter.refreshListenable]; if `/record` is
+      // still the match, the sheet is rebuilt empty. Popping first
+      // leaves the origin tab as the match, then touch() reloads it.
+      final books = BookScope.of(context);
+      _returnToOrigin();
+      books.touch();
     } on ApiException catch (error) {
       if (mounted) setState(() => _error = error.message);
     } catch (_) {
@@ -532,12 +533,32 @@ class _RecordSheetState extends State<RecordSheet> {
     await api.createTrade(body: body, idempotencyKey: key);
   }
 
-  void _close() {
+  /// Purpose: land on the tab that opened 記一筆 (帳本, 分析, 資產, 設定).
+  ///
+  /// Rule: pop this overlay. Never [GoRouter.go] to `/` — that switched
+  /// the shell to 帳本 after a save from 分析. FAB and edit all [push]
+  /// `/record` onto the root navigator; [Navigator.pop] removes it and
+  /// leaves the shell where it was. GoRouter.canPop can be false for a
+  /// ShellRoute stack even when the root navigator has this page, so
+  /// we pop the navigator that actually owns the sheet.
+  ///
+  /// Key logic: [BookScope.touch] already ran on save, so the origin
+  /// page rebuilds from SQLite when this sheet is gone.
+  void _returnToOrigin() {
+    // Must use GoRouter.pop so the `/record` match is dropped. A raw
+    // Navigator.pop leaves GoRouter on `/record`; the next touch()
+    // rebuilds an empty 記一筆. Never go('/'): that would switch 分析
+    // to 帳本.
     if (context.canPop()) {
       context.pop();
-    } else {
-      context.go('/');
+      return;
     }
+    final nav = Navigator.of(context, rootNavigator: true);
+    if (nav.canPop()) nav.pop();
+  }
+
+  void _close() {
+    _returnToOrigin();
   }
 
   @override

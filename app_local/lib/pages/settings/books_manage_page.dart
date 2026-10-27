@@ -1,13 +1,31 @@
 import 'package:flutter/material.dart';
 import 'package:full_jizhang/api.dart';
 import 'package:full_jizhang/models/ledger.dart';
+import 'package:full_jizhang/session/book_create_nav.dart';
 import 'package:full_jizhang/session/books.dart';
 import 'package:full_jizhang/theme.dart';
 import 'package:full_jizhang/widgets/field_dialog.dart';
 import 'package:full_jizhang/widgets/soft_card.dart';
 
+/// 帳本管理. Rename, archive, and 新增 share this page.
+///
+/// Purpose: 新增 must finish on the page [routeAfterBookCreate] chooses,
+/// not by staying here or opening 開帳.
+///
+/// Rules: [origin] comes from the `from` query. [_create] passes the
+/// real pre-create row count. No books yet → `/` (帳本), even when
+/// [origin] is 設定. A settings origin with an existing book returns
+/// to `/settings`. A home origin stays here when a book already
+/// existed. The new book stays current because [BookController.create]
+/// selects it; this page does not clear that.
 class BooksManagePage extends StatefulWidget {
-  const BooksManagePage({super.key});
+  const BooksManagePage({
+    super.key,
+    this.origin = BookCreateOrigin.settings,
+  });
+
+  /// Who pushed `/settings/books`. Defaults to 設定 for a direct open.
+  final BookCreateOrigin origin;
 
   @override
   State<BooksManagePage> createState() => _BooksManagePageState();
@@ -48,10 +66,39 @@ class _BooksManagePageState extends State<BooksManagePage> {
       setState(() => _error = '請填帳本名稱');
       return;
     }
-    await _run(() async {
-      await BookScope.of(context).create(name);
-      _name.clear();
+    if (_busy) return;
+    final books = BookScope.of(context);
+    // Purpose: decide the landing page from facts known before the insert.
+    // Rule: [hadBooks] is the real row count now, including archived
+    // rows, not the count after create() appends. False (no books yet)
+    // wins over [origin] and goes to 帳本. A settings origin returns
+    // to 設定 only when this count is true.
+    // Key logic: read [widget.origin] and the list, then await. No timer.
+    final hadBooks = books.books.isNotEmpty;
+    final origin = widget.origin;
+    setState(() {
+      _busy = true;
+      _error = null;
     });
+    try {
+      await books.create(name);
+      if (!mounted) return;
+      // Rule: reload restores last_book_id. create() already selected
+      // this book, so 設定's 目前 line shows the new name, not the old one.
+      await books.reload();
+      if (!mounted) return;
+      _name.clear();
+      goBookCreateRoute(
+        context,
+        routeAfterBookCreate(origin: origin, hadBooks: hadBooks),
+      );
+    } on ApiException catch (error) {
+      if (mounted) setState(() => _error = error.message);
+    } catch (_) {
+      if (mounted) setState(() => _error = '請求失敗');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 
   Future<void> _rename(Book book) async {
@@ -80,6 +127,9 @@ class _BooksManagePageState extends State<BooksManagePage> {
   Widget build(BuildContext context) {
     final books = BookScope.of(context);
     return PageScroll(
+      // Purpose: tests tell 帳本管理 from the 設定 page. Rule: this key is
+      // only on the manage page, so a return to 設定 must not find it.
+      key: const Key('page-books'),
       children: [
         const SubpageHeader(title: '帳本管理'),
         const SizedBox(height: 8),

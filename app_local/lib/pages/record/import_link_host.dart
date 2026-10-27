@@ -74,10 +74,15 @@ class _ImportLinkHostState extends State<ImportLinkHost> {
   }
 
   void _schedule() {
+    // Purpose: a live fulljizhang:// link can arrive between frames
+    // (Shortcuts while the app is idle). addPostFrameCallback alone
+    // does not schedule a frame, so the preview would never open
+    // until the next user tap. ensureVisualUpdate asks for that frame.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || _queued == null || _showing) return;
       _open(_queued!);
     });
+    WidgetsBinding.instance.ensureVisualUpdate();
   }
 
   /// True when a book is selected and the lock gate is open.
@@ -96,6 +101,9 @@ class _ImportLinkHostState extends State<ImportLinkHost> {
 
   Future<void> _open(Uri uri) async {
     final ctx = widget.navigatorKey.currentContext;
+    // The navigator is omitted while the lock gate is up, so the key has
+    // no context until unlock. Keep [_queued]. Unlock notifies LockScope,
+    // didChangeDependencies schedules this again on that frame.
     if (ctx == null || !ctx.mounted) return;
     // Keep [_queued]. Unlock and book load both notify, which schedules
     // this again. Do not drop the link just because the gate is still up.
@@ -117,6 +125,8 @@ class _ImportLinkHostState extends State<ImportLinkHost> {
         _queued = uri;
         return;
       }
+      // Confirm pops the sheet. touch() refreshes the tab that was
+      // already showing (帳本 or 分析). We never go('/').
       if (saved && ctx.mounted) BookScope.of(ctx).touch();
     } finally {
       _showing = false;

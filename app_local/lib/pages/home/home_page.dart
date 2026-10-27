@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:full_jizhang/api.dart';
 import 'package:full_jizhang/format.dart';
 import 'package:full_jizhang/models/ledger.dart';
+import 'package:full_jizhang/session/book_create_nav.dart';
 import 'package:full_jizhang/session/books.dart';
 import 'package:full_jizhang/theme.dart';
 import 'package:full_jizhang/pages/record/record_sheet.dart';
@@ -126,12 +127,28 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _createBook() async {
     if (_creating) return;
+    final books = BookScope.of(context);
+    // Purpose: the empty-state 建立帳本 finishes on 帳本, with this book
+    // current. Rule: origin is [BookCreateOrigin.firstRun], so the
+    // helper returns `/` and never 設定 or 開帳. Key logic: [hadBooks]
+    // is the row count before create(); an empty DB is false. The
+    // route is applied after create(), not on a timer. create() still
+    // selects the new book (existing behaviour).
+    final hadBooks = books.books.isNotEmpty;
     setState(() {
       _creating = true;
       _error = null;
     });
     try {
-      await BookScope.of(context).create(_name.text);
+      await books.create(_name.text);
+      if (!mounted) return;
+      goBookCreateRoute(
+        context,
+        routeAfterBookCreate(
+          origin: BookCreateOrigin.firstRun,
+          hadBooks: hadBooks,
+        ),
+      );
     } on ApiException catch (error) {
       if (mounted) setState(() => _error = error.message);
     } catch (_) {
@@ -178,7 +195,11 @@ class _HomePageState extends State<HomePage> {
     );
     if (!mounted || selected == null) return;
     if (selected == 'manage') {
-      context.push('/settings/books');
+      // Purpose: 管理帳本 from the 帳本 switcher is not a 設定 create.
+      // Rule: `from=home` keeps 新增 on this page when a book already
+      // exists, and sends a first book to `/`. Key logic: the query is
+      // the origin; we do not go('/opening') after the push.
+      context.push('/settings/books?from=home');
       return;
     }
     if (selected == books.current?.id) return;
@@ -194,17 +215,21 @@ class _HomePageState extends State<HomePage> {
     final books = BookScope.of(context);
     if (!books.ready) {
       return const ColoredBox(
+        key: Key('page-home'),
         color: AppColors.sheet,
         child: Center(child: CircularProgressIndicator(color: AppColors.sage)),
       );
     }
     if (books.current == null) {
-      return _EmptyBooks(
-        controller: _name,
-        busy: _creating,
-        error: _error ?? books.error,
-        archived: books.books.any((book) => book.archived),
-        onCreate: _createBook,
+      return KeyedSubtree(
+        key: const Key('page-home'),
+        child: _EmptyBooks(
+          controller: _name,
+          busy: _creating,
+          error: _error ?? books.error,
+          archived: books.books.any((book) => book.archived),
+          onCreate: _createBook,
+        ),
       );
     }
     final summary = _summary;
@@ -212,6 +237,7 @@ class _HomePageState extends State<HomePage> {
         ? summary!.today
         : taipeiToday();
     return PageScroll(
+      key: const Key('page-home'),
       onRefresh: () => _load(refreshQuotes: true),
       children: [
         _TopBar(
@@ -348,6 +374,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  /// Opens the row in 記一筆. push so 存檔 / close pop back to 帳本.
   void _editEntry(Entry entry) {
     context.push(
       '/record',
@@ -365,6 +392,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  /// Same push as [_editEntry]: 存檔 returns to 帳本 and touch() reloads.
   void _editTrade(_LedgerRow row) {
     final trade = row.trade!;
     final price = trade['price'];
@@ -436,6 +464,8 @@ class _HomePageState extends State<HomePage> {
     try {
       await action();
       if (!mounted) return;
+      // Stay on 帳本. touch() reloads the list from SQLite so the
+      // deleted row is gone and totals match the remaining entries.
       BookScope.of(context).touch();
     } on ApiException catch (error) {
       if (mounted) setState(() => _error = error.message);
@@ -530,7 +560,10 @@ class _EmptyBooks extends StatelessWidget {
           if (archived) ...[
             const SizedBox(height: 8),
             TextButton(
-              onPressed: () => context.push('/settings/books'),
+              // Purpose: archived books are managed from the empty state.
+              // Rule: same home origin as the switcher, so 新增 does not
+              // jump to 開帳. Key logic: `from=home` is read by the route.
+              onPressed: () => context.push('/settings/books?from=home'),
               child: const Text('管理已封存的帳本'),
             ),
           ],
