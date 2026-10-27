@@ -128,9 +128,16 @@ abstract class ApiClient {
 
   Future<StatsSummary> statsSummary({required String bookId, String? month});
 
+  /// Expense totals by category for [month], or for [[from], [to]] inclusive.
+  ///
+  /// Rule: only `expense` rows. Transfers and opening_balance are excluded.
+  /// Null category_id is grouped as 未分類. [from]/[to] win over [month]
+  /// so a year view can pass the calendar year.
   Future<List<CategoryAmount>> statsByCategory({
     required String bookId,
     String? month,
+    String? from,
+    String? to,
   });
 
   Future<List<Position>> listPositions(String bookId);

@@ -15,9 +15,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 // Rules enforced by [LockController]:
 // - Lock off (no password record, no legacy flag): launch and resume open
 //   straight into the ledger. No prompt.
-// - Lock on: launch and resume set [locked] before any biometric prompt
-//   returns, so the book cannot flash. Biometrics run with
-//   biometricOnly: true. Cancel or failure leaves the password field.
+// - Lock on: [locked] starts true, so the first frame is the splash, not
+//   帳本. Launch and a return from background set [locked] before any
+//   biometric prompt returns. 0s grace: cover on paused/hidden; Face ID
+//   then password on resumed. inactive is ignored so the Face ID sheet
+//   cannot loop. Biometrics run with biometricOnly: true. Cancel or
+//   failure leaves the password field.
 // - Enabling the password lock needs a new password and a matching
 //   confirmation, each at least [minPasswordLength] characters, not trimmed.
 // - Disabling the lock or changing the password needs the current password.
@@ -258,6 +261,10 @@ class LockController extends ChangeNotifier with WidgetsBindingObserver {
   bool _disposed = false;
   bool _prompting = false;
   bool _observing = false;
+  /// True after [AppLifecycleState.paused] / [hidden] while the lock is on.
+  /// Resume without this flag is the Face ID sheet coming back, not a
+  /// real return from background, so we must not re-lock.
+  bool _wasBackgrounded = false;
   Future<void>? _bootstrapInFlight;
 
   /// True when a lock should cover the app (password or legacy migration).
@@ -351,11 +358,48 @@ class LockController extends ChangeNotifier with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    // Resume must cover the book before the prompt. The method is not
-    // awaited by the framework; [relockOnResume] still sets [locked] first.
-    if (state == AppLifecycleState.resumed) {
-      unawaited(relockOnResume());
+    // Purpose: cover the ledger the moment the app is no longer visible,
+    // then demand Face ID / password when it is visible again.
+    //
+    // 0s grace: lock on paused/hidden immediately. A short delay would
+    // leave a frame of 帳本 in the app switcher; there is no in-app
+    // reason to wait.
+    //
+    // Rule: ignore [AppLifecycleState.inactive]. Face ID and the system
+    // passcode sheet put the activity in inactive without a real
+    // background. Locking then would call [unlock] again and loop the
+    // prompt. [_prompting] also swallows paused/hidden/resumed for the
+    // same reason while the sheet is up. Only a paused/hidden that
+    // happened while we were not prompting counts as a real background
+    // ([_wasBackgrounded]), so the leftover resumed after Face ID is
+    // ignored.
+    if (_prompting) return;
+    switch (state) {
+      case AppLifecycleState.paused:
+      case AppLifecycleState.hidden:
+        _lockForBackground();
+      case AppLifecycleState.resumed:
+        if (!_wasBackgrounded) return;
+        _wasBackgrounded = false;
+        unawaited(relockOnResume());
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.detached:
+        return;
     }
+  }
+
+  /// Covers the book as soon as the process is no longer visible.
+  ///
+  /// Key logic: [locked] flips true synchronously so the next frame is
+  /// the lock UI, not 帳本. Unlock is not attempted here — Face ID
+  /// would fail in the background. [relockOnResume] runs the prompt.
+  void _lockForBackground() {
+    if (!enabled) return;
+    _wasBackgrounded = true;
+    if (locked) return;
+    locked = true;
+    migrationReady = false;
+    _notify();
   }
 
   /// Covers the app on resume, then tries Face ID or the migration prompt.
@@ -427,7 +471,8 @@ class LockController extends ChangeNotifier with WidgetsBindingObserver {
   /// Face ID switch.
   ///
   /// Rule: off when there is no password, even if a caller bypasses the
-  /// disabled switch. Turning on requires a successful biometricOnly prompt.
+  /// disabled switch in 設定. This is the controller rule, not only UI.
+  /// Turning on requires a successful biometricOnly prompt.
   /// Turning off does not require the password; disabling the password lock
   /// is what forces Face ID off.
   Future<LockResult> setBiometrics(bool value) async {

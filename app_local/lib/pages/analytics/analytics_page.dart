@@ -3,12 +3,28 @@ import 'package:flutter/material.dart';
 import 'package:full_jizhang/api.dart';
 import 'package:full_jizhang/format.dart';
 import 'package:full_jizhang/models/ledger.dart';
+import 'package:full_jizhang/services/analytics_agg.dart';
 import 'package:full_jizhang/session/books.dart';
 import 'package:full_jizhang/theme.dart';
 import 'package:full_jizhang/widgets/soft_card.dart';
 import 'package:go_router/go_router.dart';
 
 enum TrendMode { expense, income, cash }
+
+/// Line-chart grain. A month is one point per day of booked amounts; a
+/// year is one point per month (the "longer range" roll-up).
+enum PeriodGrain { month, year }
+
+// 分析. Line = booked expense (or income) from SQLite entries; pie =
+// those expenses grouped by category.
+//
+// Purpose: the trend is actual recorded amounts, not a running cash
+// balance or placeholder. A month is per-day sums; a year (tap the
+// period pill) is per-month sums. Transfers and opening_balance are
+// excluded from both series (LocalApi.statsDaily and analytics_agg).
+//
+// Rules: 未分類 collects expenses with a null category. Pie percents
+// sum to 100. 記一筆 from this page is a push, so 存檔 pops back here.
 
 const _sliceColors = <Color>[
   Color(0xFF8FB09F),
@@ -32,11 +48,13 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
   String? _bookId;
   int _generation = -1;
   String _month = yearMonthNow();
+  PeriodGrain _grain = PeriodGrain.month;
   TrendMode _mode = TrendMode.expense;
   bool _loading = false;
   String? _error;
   List<DailyPoint> _daily = [];
   List<CategoryAmount> _slices = [];
+  List<int> _slicePercents = [];
   List<Entry> _entries = [];
   String? _selectedCategory;
 
@@ -62,6 +80,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
         _loading = false;
         _daily = [];
         _slices = [];
+        _slicePercents = [];
         _entries = [];
       });
       return;
@@ -73,41 +92,48 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     try {
       final today = taipeiToday();
       final opening = book.openingDate;
-      late final String from;
-      late final String to;
-      if (_mode == TrendMode.cash) {
-        from = (opening == null || opening.isEmpty) ? '$_month-01' : opening;
-        to = today;
-      } else {
-        final start = '$_month-01';
-        final end = _month == today.substring(0, 7) ? today : monthEnd(_month);
-        if (opening != null && end.compareTo(opening) < 0) {
-          if (!mounted) return;
-          setState(() {
-            _daily = [];
-            _slices = [];
-            _entries = [];
-            _loading = false;
-          });
-          return;
-        }
-        from = opening != null && start.compareTo(opening) < 0 ? opening : start;
-        to = end;
+      final range = _range(today: today, opening: opening);
+      if (range == null) {
+        if (!mounted) return;
+        setState(() {
+          _daily = [];
+          _slices = [];
+          _slicePercents = [];
+          _entries = [];
+          _loading = false;
+        });
+        return;
       }
+      final from = range.$1;
+      final to = range.$2;
       final api = BookScope.of(context).api;
-      final daily = from.compareTo(to) > 0
+      // Purpose: the line is booked expense / income for this period.
+      // statsDaily already excludes transfers and opening from those
+      // fields. A year range is rolled up to one point per month so the
+      // chart is not a daily running cashNet series.
+      var daily = from.compareTo(to) > 0
           ? <DailyPoint>[]
           : await api.statsDaily(bookId: book.id, from: from, to: to);
-      final slices = await api.statsByCategory(bookId: book.id, month: _month);
+      if (_grain == PeriodGrain.year) {
+        daily = rollUpDailyPointsByMonth(daily);
+      }
+      final slices = await api.statsByCategory(
+        bookId: book.id,
+        from: from,
+        to: to,
+      );
       final entries = await api.listEntries(
         bookId: book.id,
-        from: '$_month-01',
-        to: monthEnd(_month),
+        from: from,
+        to: to,
       );
       if (!mounted) return;
       setState(() {
         _daily = daily;
         _slices = slices;
+        _slicePercents = percentagesTotaling100(
+          [for (final slice in slices) slice.amount],
+        );
         _entries = entries;
         _loading = false;
         if (_selectedCategory != null &&
@@ -130,6 +156,28 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     }
   }
 
+  /// Inclusive [from, to] for the selected month or year.
+  ///
+  /// Rule: every mode (支出 / 收入 / 現金淨資產) uses this period. The old
+  /// cash path loaded opening→today and plotted running cashNet across
+  /// the whole book; that is no longer the line's default range.
+  (String, String)? _range({required String today, required String? opening}) {
+    late final String start;
+    late final String end;
+    if (_grain == PeriodGrain.year) {
+      final year = _month.substring(0, 4);
+      start = '$year-01-01';
+      end = year == today.substring(0, 4) ? today : '$year-12-31';
+    } else {
+      start = '$_month-01';
+      end = _month == today.substring(0, 7) ? today : monthEnd(_month);
+    }
+    if (opening != null && end.compareTo(opening) < 0) return null;
+    final from =
+        opening != null && start.compareTo(opening) < 0 ? opening : start;
+    return (from, end);
+  }
+
   void _setMode(TrendMode mode) {
     if (_mode == mode) return;
     setState(() => _mode = mode);
@@ -137,6 +185,16 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
   }
 
   void _shiftMonth(int delta) {
+    if (_grain == PeriodGrain.year) {
+      final year = int.parse(_month.substring(0, 4)) + delta;
+      final todayYear = int.parse(taipeiToday().substring(0, 4));
+      if (year > todayYear) return;
+      final opening = BookScope.of(context).current?.openingDate;
+      if (opening != null && '$year-12-31'.compareTo(opening) < 0) return;
+      setState(() => _month = '$year-${_month.substring(5, 7)}');
+      _load();
+      return;
+    }
     final next = shiftMonth(_month, delta);
     final todayMonth = taipeiToday().substring(0, 7);
     if (next.compareTo(todayMonth) > 0) return;
@@ -146,13 +204,29 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     _load();
   }
 
+  /// Month ↔ year. Year uses per-month booked totals on the line.
+  void _toggleGrain() {
+    setState(() {
+      _grain = _grain == PeriodGrain.month
+          ? PeriodGrain.year
+          : PeriodGrain.month;
+    });
+    _load();
+  }
+
   @override
   Widget build(BuildContext context) {
     final books = BookScope.of(context);
     final text = Theme.of(context).textTheme;
-    final monthLabel = _month == taipeiToday().substring(0, 7) ? '本月' : _monthLabel();
+    final today = taipeiToday();
+    final monthLabel = _grain == PeriodGrain.year
+        ? (_month.substring(0, 4) == today.substring(0, 4)
+            ? '今年'
+            : '${_month.substring(0, 4)} 年')
+        : (_month == today.substring(0, 7) ? '本月' : _monthLabel());
     final emptySpend = _slices.isEmpty && _mode == TrendMode.expense;
     return PageScroll(
+      key: const Key('page-analytics'),
       onRefresh: _load,
       children: [
         Row(
@@ -163,6 +237,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
               label: monthLabel,
               onPrev: () => _shiftMonth(-1),
               onNext: () => _shiftMonth(1),
+              onToggleGrain: _toggleGrain,
             ),
           ],
         ),
@@ -182,7 +257,10 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
           if (!emptySpend || _mode != TrendMode.expense || _daily.isNotEmpty)
             _TrendCard(
               mode: _mode,
-              monthLabel: _monthLabel(),
+              monthLabel: _grain == PeriodGrain.year
+                  ? '${_month.substring(0, 4)} 年'
+                  : _monthLabel(),
+              grain: _grain,
               daily: _daily,
               onMode: _setMode,
             ),
@@ -190,6 +268,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
             const SizedBox(height: 8),
             _PieCard(
               slices: _slices,
+              percents: _slicePercents,
               selected: _selectedCategory,
               onSelect: (id) {
                 setState(() {
@@ -202,7 +281,13 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
             const SizedBox(height: 8),
             _CategoryEntries(
               entries: _entries
-                  .where((entry) => entry.categoryId == _selectedCategory)
+                  .where((entry) {
+                    if (_selectedCategory == uncategorizedCategoryId) {
+                      return entry.categoryId == null ||
+                          entry.categoryId!.isEmpty;
+                    }
+                    return entry.categoryId == _selectedCategory;
+                  })
                   .toList(),
             ),
           ],
@@ -228,11 +313,13 @@ class _MonthPill extends StatelessWidget {
     required this.label,
     required this.onPrev,
     required this.onNext,
+    required this.onToggleGrain,
   });
 
   final String label;
   final VoidCallback onPrev;
   final VoidCallback onNext;
+  final VoidCallback onToggleGrain;
 
   @override
   Widget build(BuildContext context) {
@@ -252,10 +339,14 @@ class _MonthPill extends StatelessWidget {
             icon: const Icon(Icons.chevron_left_rounded, size: 18),
             visualDensity: VisualDensity.compact,
           ),
-          Text(
-            label,
-            key: const Key('analytics-month'),
-            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+          GestureDetector(
+            key: const Key('analytics-grain'),
+            onTap: onToggleGrain,
+            child: Text(
+              label,
+              key: const Key('analytics-month'),
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+            ),
           ),
           IconButton(
             key: const Key('month-next'),
@@ -274,25 +365,32 @@ class _TrendCard extends StatelessWidget {
   const _TrendCard({
     required this.mode,
     required this.monthLabel,
+    required this.grain,
     required this.daily,
     required this.onMode,
   });
 
   final TrendMode mode;
   final String monthLabel;
+  final PeriodGrain grain;
   final List<DailyPoint> daily;
   final ValueChanged<TrendMode> onMode;
 
   @override
   Widget build(BuildContext context) {
+    final byMonth = grain == PeriodGrain.year;
     final title = switch (mode) {
       TrendMode.expense => '支出趨勢',
       TrendMode.income => '收入趨勢',
       TrendMode.cash => '現金淨資產',
     };
+    // 支出 / 收入 always read booked sums. 現金淨資產 is the running cash
+    // series (opening + transfers included) and is a separate toggle.
     final subtitle = switch (mode) {
-      TrendMode.expense => '$monthLabel · 日支出',
-      TrendMode.income => '$monthLabel · 日收入',
+      TrendMode.expense =>
+        byMonth ? '$monthLabel · 月支出' : '$monthLabel · 日支出',
+      TrendMode.income =>
+        byMonth ? '$monthLabel · 月收入' : '$monthLabel · 日收入',
       TrendMode.cash => '不含持倉 · 帳戶現金／負債走勢',
     };
     return SoftCard(
@@ -317,7 +415,10 @@ class _TrendCard extends StatelessWidget {
             style: const TextStyle(fontSize: 11, color: AppColors.secondary),
           ),
           const SizedBox(height: 8),
-          SizedBox(height: 120, child: _Line(mode: mode, daily: daily)),
+          SizedBox(
+            height: 120,
+            child: _Line(mode: mode, grain: grain, daily: daily),
+          ),
         ],
       ),
     );
@@ -387,9 +488,10 @@ class _Pills extends StatelessWidget {
 }
 
 class _Line extends StatelessWidget {
-  const _Line({required this.mode, required this.daily});
+  const _Line({required this.mode, required this.grain, required this.daily});
 
   final TrendMode mode;
+  final PeriodGrain grain;
   final List<DailyPoint> daily;
 
   @override
@@ -402,6 +504,9 @@ class _Line extends StatelessWidget {
         ),
       );
     }
+    // Purpose: plot booked amounts. expense/income come from SQLite
+    // type filters (transfers and opening_balance already stripped in
+    // statsDaily). cashNet is only used when that toggle is on.
     final spots = <FlSpot>[];
     final labels = <String>[];
     for (var i = 0; i < daily.length; i++) {
@@ -412,8 +517,16 @@ class _Line extends StatelessWidget {
         TrendMode.cash => point.cashNet,
       };
       spots.add(FlSpot(i.toDouble(), value.toDouble()));
-      final day = point.date.length >= 10 ? point.date.substring(8) : '${i + 1}';
-      labels.add(day.startsWith('0') ? day.substring(1) : day);
+      if (grain == PeriodGrain.year) {
+        final month = point.date.length >= 7
+            ? int.tryParse(point.date.substring(5, 7)) ?? (i + 1)
+            : i + 1;
+        labels.add('$month月');
+      } else {
+        final day =
+            point.date.length >= 10 ? point.date.substring(8) : '${i + 1}';
+        labels.add(day.startsWith('0') ? day.substring(1) : day);
+      }
     }
     var minY = 0.0;
     var maxY = 1.0;
@@ -495,16 +608,23 @@ class _Line extends StatelessWidget {
 class _PieCard extends StatelessWidget {
   const _PieCard({
     required this.slices,
+    required this.percents,
     required this.selected,
     required this.onSelect,
   });
 
   final List<CategoryAmount> slices;
+  /// Integers from [percentagesTotaling100]; one per slice, sum to 100.
+  final List<int> percents;
   final String? selected;
   final ValueChanged<String> onSelect;
 
   @override
   Widget build(BuildContext context) {
+    // Purpose: one slice per expense category for the selected period.
+    // Rule: amounts are SQLite sums (transfers / opening excluded).
+    // 未分類 is the leftover group. percents are assigned so they add
+    // to 100 rather than each share being rounded on its own.
     final total = slices.fold<int>(0, (sum, slice) => sum + slice.amount);
     return SoftCard(
       child: Column(
@@ -605,7 +725,7 @@ class _PieCard extends StatelessWidget {
                               const SizedBox(width: 6),
                               Flexible(
                                 child: Text(
-                                  '${_percent(slices[i].amount, total)} · ${formatNtd(slices[i].amount)}',
+                                  '${i < percents.length ? percents[i] : 0}% · ${formatNtd(slices[i].amount)}',
                                   overflow: TextOverflow.ellipsis,
                                   textAlign: TextAlign.right,
                                   style: const TextStyle(
@@ -626,11 +746,6 @@ class _PieCard extends StatelessWidget {
         ],
       ),
     );
-  }
-
-  String _percent(int amount, int total) {
-    if (total <= 0) return '0%';
-    return '${(amount * 100 / total).round()}%';
   }
 }
 
@@ -725,6 +840,7 @@ class _EmptySpend extends StatelessWidget {
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
             ),
+            // push so 存檔 pops back to 分析, not 帳本.
             onPressed: () => context.push('/record'),
             child: const Text('記一筆'),
           ),
