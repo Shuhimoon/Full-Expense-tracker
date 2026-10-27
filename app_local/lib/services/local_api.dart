@@ -1102,9 +1102,10 @@ class LocalApi implements ApiClient {
   ///
   /// Ports `stats.go` `handleStatsDaily`. [from] may not be earlier than the
   /// opening date (400 「from 不可早於開帳日」). Expense and income are that day's
-  /// sums. [DailyPoint.cashNet] is a running total: it starts from cash on
-  /// the day before the opening date (or before [from] when the book has no
-  /// opening date) and adds each day's signed deltas, credit cards inverted.
+  /// booked sums from `type = 'expense'` / `'income'` only — transfers and
+  /// opening_balance never add to those two fields. [DailyPoint.cashNet] is
+  /// a running total (opening + transfers included) and is only for the
+  /// 現金淨資產 toggle, not the 支出 / 收入 line.
   Future<List<DailyPoint>> statsDaily({
     required String bookId,
     required String from,
@@ -1216,33 +1217,56 @@ class LocalApi implements ApiClient {
   }
 
   @override
-  /// Expense totals by category for one month. Ports `stats.go` `handleStatsByCat`.
-  /// Zero groups are dropped. Ordered by amount descending.
+  /// Expense totals by category for one month, or [[from], [to]] inclusive.
+  ///
+  /// Purpose: the 分析 pie is real booked expenses, not a placeholder.
+  /// Rule: only `type = 'expense'`. Transfers and opening_balance never
+  /// appear. A LEFT JOIN keeps rows with a null category_id and labels
+  /// them 未分類. Zero groups are dropped. Ordered by amount descending.
+  /// Key logic: [from]/[to] win so a year view can pass the calendar
+  /// year; otherwise [month] is `[YYYY-MM-01, next month)`.
   Future<List<CategoryAmount>> statsByCategory({
     required String bookId,
     String? month,
+    String? from,
+    String? to,
   }) async {
     await _loadBook(bookId);
-    month = (month == null || month.isEmpty) ? yearMonthNow(_now()) : month;
-    month = month.substring(0, 7);
-    final start = monthStart(month);
-    if (!isIsoDateStr(start)) throw ApiException('月份格式不對', status: 400);
-    final end = monthEndExclusive(month);
+    late final String start;
+    late final String endInclusive;
+    if (from != null &&
+        from.isNotEmpty &&
+        to != null &&
+        to.isNotEmpty) {
+      if (!isIsoDateStr(from) || !isIsoDateStr(to)) {
+        throw ApiException('日期格式不對', status: 400);
+      }
+      start = from;
+      endInclusive = to;
+    } else {
+      month = (month == null || month.isEmpty) ? yearMonthNow(_now()) : month;
+      month = month.substring(0, 7);
+      start = monthStart(month);
+      if (!isIsoDateStr(start)) throw ApiException('月份格式不對', status: 400);
+      endInclusive = monthEnd(month);
+    }
     final rows = await db.customSelect(
       '''
-      SELECT c.id AS category_id, c.name AS name, COALESCE(SUM(e.amount),0) AS amount
+      SELECT COALESCE(c.id, '') AS category_id,
+             COALESCE(c.name, '未分類') AS name,
+             COALESCE(SUM(e.amount),0) AS amount
       FROM entries e
-      JOIN categories c ON c.id = e.category_id
+      LEFT JOIN categories c ON c.id = e.category_id
       WHERE e.book_id = ? AND e.deleted_at IS NULL AND e.type = 'expense'
-        AND e.date >= ? AND e.date < ?
-      GROUP BY c.id, c.name
+        AND e.date >= ? AND e.date <= ?
+      GROUP BY COALESCE(c.id, ''), COALESCE(c.name, '未分類')
       HAVING SUM(e.amount) > 0
       ORDER BY amount DESC
       ''',
       variables: [
         Variable.withString(bookId),
         Variable.withString(start),
-        Variable.withString(end),
+        Variable.withString(endInclusive),
       ],
     ).get();
     return [

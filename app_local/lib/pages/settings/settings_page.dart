@@ -52,12 +52,35 @@ class _SettingsPageState extends State<SettingsPage> {
                   padding: EdgeInsets.all(16),
                   child: Text('沒有可切換的帳本'),
                 ),
+              // Purpose: 新增帳本 from the switcher reached on 設定.
+              // Rule: pop the sheet with a sentinel, then push 帳本管理
+              // with `from=settings`. That page passes the real
+              // pre-create book count. An existing book returns here;
+              // the first book goes to 帳本.
+              // Key logic: the sentinel is not a book id, so it is not
+              // passed to select().
+              ListTile(
+                key: const Key('settings-new-book'),
+                title: const Text('新增帳本'),
+                trailing: const Icon(Icons.add_rounded),
+                onTap: () => Navigator.pop(context, 'create'),
+              ),
             ],
           ),
         );
       },
     );
-    if (!mounted || id == null || id == books.current?.id) return;
+    if (!mounted || id == null) return;
+    if (id == 'create') {
+      // Purpose: open the name form still tagged as a 設定 create.
+      // Rule: `from=settings` is the origin. The manage page passes the
+      // real pre-create count: an existing book returns to `/settings`,
+      // and no books yet goes to 帳本 `/`. Never 開帳.
+      // Key logic: the sheet is already popped.
+      context.push('/settings/books?from=settings');
+      return;
+    }
+    if (id == books.current?.id) return;
     try {
       await books.select(id);
     } on ApiException catch (error) {
@@ -175,6 +198,9 @@ class _SettingsPageState extends State<SettingsPage> {
     final current = books.current?.name;
     final names = books.activeBooks.map((book) => book.name).join(' · ');
     return PageScroll(
+      // Purpose: mark the 設定 page itself, not 帳本管理 and not 帳本.
+      // Rule: a finished 新增 from this tab must find this key again.
+      key: const Key('page-settings'),
       children: [
         Text('設定', style: text.titleLarge),
         const SizedBox(height: 12),
@@ -185,7 +211,12 @@ class _SettingsPageState extends State<SettingsPage> {
               icon: Icons.menu_book_outlined,
               title: '帳本管理',
               subtitle: current == null ? '尚未建立' : '目前：$current',
-              onTap: () => context.push('/settings/books'),
+              // Purpose: 帳本管理 opened from 設定. Rule: `from=settings`
+              // is the origin. The manage page passes the real pre-create
+              // count, so an existing book returns here and a first book
+              // goes to 帳本. 目前／the names refresh via BookScope.
+              // Key logic: the query is the origin.
+              onTap: () => context.push('/settings/books?from=settings'),
             ),
             _SettingsRow(
               rowKey: const Key('settings-switch'),
@@ -225,6 +256,9 @@ class _SettingsPageState extends State<SettingsPage> {
               subtitle: '匯出／匯入 JSON',
               onTap: () => context.push('/settings/backup'),
             ),
+            // 密碼鎖 switch. On asks for a new password; off asks for the
+            // current one. Face ID stays inert until this is on (controller
+            // rule, not only the disabled switch below).
             _SwitchRow(
               icon: Icons.lock_outline,
               title: '密碼鎖',

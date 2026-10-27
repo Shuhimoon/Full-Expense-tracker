@@ -10,6 +10,7 @@ import 'package:full_jizhang/pages/settings/backup_page.dart';
 import 'package:full_jizhang/pages/settings/books_manage_page.dart';
 import 'package:full_jizhang/pages/settings/categories_page.dart';
 import 'package:full_jizhang/pages/settings/settings_page.dart';
+import 'package:full_jizhang/session/book_create_nav.dart';
 import 'package:full_jizhang/session/books.dart';
 import 'package:full_jizhang/shell.dart';
 import 'package:go_router/go_router.dart';
@@ -19,16 +20,22 @@ import 'package:go_router/go_router.dart';
 /// `/boot` stays up until [BookController.ready]. After that the shell is
 /// home, analytics, assets, and settings. There is no login route: the
 /// device is the only user. Settings nests books, categories, and backup.
-/// Opening and the record sheet sit outside the shell. 自動記帳 is a
-/// settings subpage. [navigatorKey] is the root navigator the Apple Pay
-/// import sheet uses. [RecordEdit] arrives as `/record` extra; a missing
-/// extra is a new entry.
+/// Opening and the record sheet sit outside the shell. `/record` uses
+/// [navigatorKey] as [GoRoute.parentNavigatorKey] so 記一筆 is a root
+/// overlay: 存檔 pops back to the tab that opened it. 自動記帳 is a
+/// settings subpage. [navigatorKey] is also the root navigator the Apple
+/// Pay import sheet uses. [RecordEdit] arrives as `/record` extra; a
+/// missing extra is a new entry.
 GoRouter createRouter(
   BookController books, {
   GlobalKey<NavigatorState>? navigatorKey,
 }) {
+  // Shell tabs live on this navigator. `/record` uses the root key so
+  // 記一筆 is an overlay and 存檔 pops back to the tab that opened it.
+  final shellKey = GlobalKey<NavigatorState>(debugLabel: 'shell');
+  final rootKey = navigatorKey ?? GlobalKey<NavigatorState>(debugLabel: 'root');
   return GoRouter(
-    navigatorKey: navigatorKey,
+    navigatorKey: rootKey,
     initialLocation: '/boot',
     refreshListenable: books,
     redirect: (context, state) {
@@ -42,6 +49,7 @@ GoRouter createRouter(
       GoRoute(path: '/boot', builder: (context, state) => const BootPage()),
       GoRoute(
         path: '/record',
+        parentNavigatorKey: rootKey,
         pageBuilder: (context, state) {
           return CustomTransitionPage<void>(
             opaque: false,
@@ -63,6 +71,7 @@ GoRouter createRouter(
         builder: (context, state) => const OpeningPage(),
       ),
       ShellRoute(
+        navigatorKey: shellKey,
         builder: (context, state, child) =>
             AppShell(location: state.uri.path, child: child),
         routes: [
@@ -81,7 +90,19 @@ GoRouter createRouter(
             routes: [
               GoRoute(
                 path: 'books',
-                builder: (context, state) => const BooksManagePage(),
+                builder: (context, state) {
+                  // Purpose: pass the opener into 帳本管理. Rule: the manage
+                  // page passes the real pre-create count. No books yet
+                  // goes to `/` for every origin. When books already exist,
+                  // `from=home` stays on this page and anything else
+                  // returns to 設定. Key logic: the query is read once
+                  // here, before the user types a name.
+                  return BooksManagePage(
+                    origin: originFromBooksQuery(
+                      state.uri.queryParameters['from'],
+                    ),
+                  );
+                },
               ),
               GoRoute(
                 path: 'categories',
