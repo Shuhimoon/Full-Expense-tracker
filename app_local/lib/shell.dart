@@ -52,6 +52,8 @@ class AppShell extends StatelessWidget {
                       ),
                     ),
                     // Doop 02-home .fab: 44px circle, 12px inside the sheet corner.
+                    // push (not go) so 存檔 pops back to this tab — 帳本,
+                    // 分析, 資產, or 設定 — and BookScope.touch refreshes it.
                     Positioned(
                       right: 12,
                       bottom: 12,
