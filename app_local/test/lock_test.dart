@@ -7,6 +7,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:full_jizhang/app.dart';
 import 'package:full_jizhang/data/database.dart';
 import 'package:full_jizhang/lock.dart';
+import 'package:full_jizhang/pages/analytics/analytics_page.dart';
+import 'package:full_jizhang/pages/home/home_page.dart';
 import 'package:full_jizhang/pages/settings/settings_page.dart';
 import 'package:full_jizhang/services/incoming_links.dart';
 import 'package:full_jizhang/services/local_api.dart';
@@ -535,6 +537,109 @@ void main() {
     expect(lock.locked, isFalse);
   });
 
+  testWidgets('cold start shows lock before any protected widget', (
+    tester,
+  ) async {
+    final inner = MemorySecureStore();
+    await _seed(inner, 'abcd');
+    // Hold the keystore read so the first frames are the splash, not 帳本.
+    final store = _HoldStore(inner);
+    final lock = LockController(
+      auth: _Gate()..allow = false,
+      store: store,
+      hasher: _inlineHash,
+      kdfIterations: 200,
+      observeLifecycle: false,
+    );
+    addTearDown(lock.dispose);
+
+    final db = AppDatabase.memory();
+    addTearDown(db.close);
+    final api = LocalApi(db);
+    await api.createBook(name: '生活');
+    await api.createAccount(
+      bookId: (await api.listBooks()).first.id,
+      name: '現金',
+      type: 'cash',
+    );
+
+    tester.view.physicalSize = const Size(420, 1400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(FullJizhangApp(api: api, lock: lock));
+    await tester.pump();
+    expect(find.byKey(const Key('lock-cover')), findsOneWidget);
+    expect(find.byType(HomePage), findsNothing);
+    expect(find.byType(AnalyticsPage), findsNothing);
+    expect(find.byKey(const Key('nav-ledger')), findsNothing);
+    expect(find.byKey(const Key('page-home')), findsNothing);
+
+    store.release();
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('lock-password')), findsOneWidget);
+    expect(find.byType(HomePage), findsNothing);
+    expect(find.byType(AnalyticsPage), findsNothing);
+    expect(find.byKey(const Key('nav-ledger')), findsNothing);
+    expect(find.text('匯入預覽'), findsNothing);
+
+    await tester.enterText(find.byKey(const Key('lock-password')), 'abcd');
+    await tester.tap(find.byKey(const Key('lock-unlock')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('page-home')), findsOneWidget);
+    expect(find.byKey(const Key('lock-password')), findsNothing);
+  });
+
+  testWidgets('resume after background re-locks before protected content', (
+    tester,
+  ) async {
+    final store = MemorySecureStore();
+    await _seed(store, 'abcd');
+    // observeLifecycle: Face ID is off, so paused covers and resumed
+    // leaves the password field up. inactive is ignored.
+    final lock = LockController(
+      auth: _Gate()..allow = false,
+      store: store,
+      hasher: _inlineHash,
+      kdfIterations: 200,
+    );
+    addTearDown(lock.dispose);
+
+    final db = AppDatabase.memory();
+    addTearDown(db.close);
+    final api = LocalApi(db);
+    await api.createBook(name: '生活');
+
+    tester.view.physicalSize = const Size(420, 1400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(FullJizhangApp(api: api, lock: lock));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('lock-password')), 'abcd');
+    await tester.tap(find.byKey(const Key('lock-unlock')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('page-home')), findsOneWidget);
+
+    // inactive is the Face ID sheet: must not cover the ledger.
+    lock.didChangeAppLifecycleState(AppLifecycleState.inactive);
+    await tester.pump();
+    expect(find.byKey(const Key('page-home')), findsOneWidget);
+
+    lock.didChangeAppLifecycleState(AppLifecycleState.paused);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('lock-password')), findsOneWidget);
+    expect(find.byType(HomePage), findsNothing);
+    expect(find.byKey(const Key('nav-ledger')), findsNothing);
+
+    lock.didChangeAppLifecycleState(AppLifecycleState.resumed);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('lock-password')), findsOneWidget);
+    expect(find.byType(HomePage), findsNothing);
+  });
+
   testWidgets('lock off opens straight in and shows the link', (tester) async {
     final lock = _controller();
     final source = _ScriptedLinks(initial: _payLink('open-1'));
@@ -559,6 +664,36 @@ void main() {
     expect(find.byKey(const Key('lock-password')), findsNothing);
     expect(find.text('匯入預覽'), findsOneWidget);
   });
+}
+
+/// Holds [read] until [release] so cold start can paint the splash first.
+class _HoldStore implements SecureStore {
+  _HoldStore(this.inner);
+
+  final MemorySecureStore inner;
+  final Completer<void> _gate = Completer<void>();
+
+  void release() {
+    if (!_gate.isCompleted) _gate.complete();
+  }
+
+  @override
+  Future<String?> read(String key) async {
+    await _gate.future;
+    return inner.read(key);
+  }
+
+  @override
+  Future<void> write(String key, String value) async {
+    await _gate.future;
+    return inner.write(key, value);
+  }
+
+  @override
+  Future<void> delete(String key) async {
+    await _gate.future;
+    return inner.delete(key);
+  }
 }
 
 LockController _controller({
