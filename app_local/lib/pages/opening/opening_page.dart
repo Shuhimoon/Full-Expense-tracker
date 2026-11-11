@@ -2,13 +2,30 @@ import 'package:flutter/material.dart';
 import 'package:full_jizhang/api.dart';
 import 'package:full_jizhang/format.dart';
 import 'package:full_jizhang/models/ledger.dart';
+import 'package:full_jizhang/services/money.dart';
+import 'package:full_jizhang/session/book_create_nav.dart';
 import 'package:full_jizhang/session/books.dart';
 import 'package:full_jizhang/theme.dart';
 import 'package:go_router/go_router.dart';
 
 /// Four-step opening snapshot. There is no lock step: step 4 saves with PUT.
+///
+/// [createMode] is a new book (＋ 新增帳本 or empty-state 建立帳本). The
+/// book is inserted only on preview save, then [routeAfterBookCreate]
+/// picks the landing page. Without [createMode] this edits the current
+/// book's opening (設定 → 開始開帳).
 class OpeningPage extends StatefulWidget {
-  const OpeningPage({super.key});
+  const OpeningPage({
+    super.key,
+    this.createMode = false,
+    this.origin = BookCreateOrigin.settings,
+  });
+
+  /// True when this wizard will create a book on save.
+  final bool createMode;
+
+  /// Who opened create mode. Ignored when [createMode] is false.
+  final BookCreateOrigin origin;
 
   @override
   State<OpeningPage> createState() => _OpeningPageState();
@@ -81,6 +98,12 @@ class _OpeningPageState extends State<OpeningPage> {
   List<Account> _accounts = [];
   int _step = 1;
   String _date = taipeiToday();
+  /// Purpose: name for a new book. Rule: empty becomes 「生活」 on save.
+  /// Key logic: only shown in [OpeningPage.createMode] on step 1.
+  final _bookName = TextEditingController();
+  /// Book-row count taken when create mode opens, before any insert.
+  bool _hadBooks = false;
+  bool _createReady = false;
   late DateTime _visibleMonth = DateTime.parse('${_date.substring(0, 7)}-01');
   bool _loading = true;
   bool _busy = false;
@@ -88,6 +111,7 @@ class _OpeningPageState extends State<OpeningPage> {
 
   @override
   void dispose() {
+    _bookName.dispose();
     for (final controller in _amounts.values) {
       controller.dispose();
     }
@@ -100,6 +124,18 @@ class _OpeningPageState extends State<OpeningPage> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    if (widget.createMode) {
+      // Purpose: create mode has no book yet. Rule: capture [hadBooks]
+      // once, before save inserts. Do not load the current book's
+      // opening, and do not follow a later select.
+      if (_createReady) return;
+      _hadBooks = BookScope.of(context).books.isNotEmpty;
+      _createReady = true;
+      _date = taipeiToday();
+      _visibleMonth = _monthOf(_date);
+      _loading = false;
+      return;
+    }
     final id = BookScope.of(context).current?.id;
     if (_bookId == id && !_loading) return;
     _bookId = id;
@@ -270,6 +306,24 @@ class _OpeningPageState extends State<OpeningPage> {
     });
   }
 
+  /// 略過 on 現倉: go to preview with no holdings.
+  ///
+  /// Purpose: frame 9 lets the user skip holdings. Rule: both 略過 and
+  /// 下一步 go to step 4. 略過 skips step-3 validation and clears
+  /// in-memory positions so the preview and the saved payload have none.
+  /// 下一步 still uses [_next], which keeps entered rows and validates.
+  void _skipHoldings() {
+    if (_busy || _step != 3) return;
+    setState(() {
+      for (final position in _positions) {
+        position.dispose();
+      }
+      _positions.clear();
+      _error = null;
+      _step = 4;
+    });
+  }
+
   void _back() {
     if (_step > 1) {
       setState(() {
@@ -290,8 +344,6 @@ class _OpeningPageState extends State<OpeningPage> {
   }
 
   Future<void> _addAccount() async {
-    final book = BookScope.of(context).current;
-    if (book == null) return;
     final created = await showDialog<(String, String)>(
       context: context,
       builder: (context) => const _NewAccountDialog(),
@@ -302,6 +354,29 @@ class _OpeningPageState extends State<OpeningPage> {
       setState(() => _error = '請填帳戶名稱');
       return;
     }
+    // Purpose: create mode has no book row yet. Rule: keep the account
+    // in memory with a temporary id and persist it only on save, so
+    // cancel leaves nothing in SQLite.
+    if (widget.createMode) {
+      final account = Account(
+        id: newId(),
+        bookId: '',
+        name: name,
+        type: type,
+        archivedAt: null,
+        version: 1,
+        cashBalance: 0,
+        positionMv: null,
+      );
+      setState(() {
+        _accounts = [..._accounts, account];
+        _amounts[account.id] = TextEditingController();
+        _error = null;
+      });
+      return;
+    }
+    final book = BookScope.of(context).current;
+    if (book == null) return;
     try {
       final account = await BookScope.of(context).api.createAccount(
         bookId: book.id,
@@ -345,6 +420,10 @@ class _OpeningPageState extends State<OpeningPage> {
 
   Future<void> _save() async {
     if (_busy) return;
+    if (widget.createMode) {
+      await _saveNewBook();
+      return;
+    }
     final book = BookScope.of(context).current;
     if (book == null) {
       setState(() => _error = '請先建立帳本');
@@ -393,7 +472,96 @@ class _OpeningPageState extends State<OpeningPage> {
     }
   }
 
+  /// Creates the book, writes accounts and the opening, then lands.
+  ///
+  /// Purpose: the insert happens only here, after preview confirm.
+  /// Rules: empty name becomes 「生活」; [hadBooks] was captured when
+  /// the page opened; 已有同名帳本 is shown on step 1. After a successful
+  /// select, [goBookCreateRoute] applies the 10/27 rules. Back/cancel
+  /// never calls this, so no leftover book is left behind.
+  Future<void> _saveNewBook() async {
+    for (var step = 1; step <= 3; step++) {
+      final error = _validate(step);
+      if (error != null) {
+        setState(() {
+          _step = step;
+          _error = error;
+        });
+        return;
+      }
+    }
+    if (_hasUnknown) {
+      final confirmed = await _confirmUnknown();
+      if (!confirmed || !mounted) return;
+    }
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    final name = _bookName.text.trim().isEmpty ? '生活' : _bookName.text.trim();
+    final books = BookScope.of(context);
+    try {
+      final book = await books.api.createBook(name: name);
+      if (!mounted) return;
+      final idMap = <String, String>{};
+      for (final account in _accounts) {
+        final created = await books.api.createAccount(
+          bookId: book.id,
+          name: account.name,
+          type: account.type,
+        );
+        idMap[account.id] = created.id;
+      }
+      if (!mounted) return;
+      // Remap temporary account ids in amounts and holdings so
+      // putOpening sees the rows that were just inserted.
+      final remappedAccounts = [
+        for (final account in _accounts)
+          {
+            'account_id': idMap[account.id] ?? account.id,
+            'amount': _amountOf(account),
+          },
+      ];
+      final remappedPositions = [
+        for (final position in _activePositions)
+          _positionBody(
+            position,
+            accountId: idMap[position.accountId] ?? position.accountId,
+          ),
+      ];
+      await books.api.putOpening(
+        bookId: book.id,
+        body: {
+          'opening_date': _date,
+          'accounts': remappedAccounts,
+          'positions': remappedPositions,
+        },
+      );
+      if (!mounted) return;
+      await books.select(book.id);
+      if (!mounted) return;
+      books.touch();
+      goBookCreateRoute(
+        context,
+        routeAfterBookCreate(origin: widget.origin, hadBooks: _hadBooks),
+      );
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _error = error.message;
+        if (error.message.contains('同名') || error.message.contains('開帳日')) {
+          _step = 1;
+        }
+      });
+    } catch (_) {
+      if (mounted) setState(() => _error = '請求失敗');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   Future<bool> _confirmUnknown() async {
+
     final answer = await showDialog<bool>(
       context: context,
       builder: (context) {
@@ -431,7 +599,7 @@ class _OpeningPageState extends State<OpeningPage> {
     };
   }
 
-  Map<String, dynamic> _positionBody(_PosForm position) {
+  Map<String, dynamic> _positionBody(_PosForm position, {String? accountId}) {
     final symbol = position.symbol.text.trim().toUpperCase();
     final name = position.name.trim().isEmpty ? symbol : position.name.trim();
     final qty = readDecimal(position.qty.text) ?? '0';
@@ -439,7 +607,7 @@ class _OpeningPageState extends State<OpeningPage> {
         ? '0'
         : (readDecimal(position.cost.text) ?? '0');
     final body = <String, dynamic>{
-      'account_id': position.accountId,
+      'account_id': accountId ?? position.accountId,
       'symbol': symbol,
       'name': name,
       'asset_class': position.assetClass,
@@ -554,7 +722,9 @@ class _OpeningPageState extends State<OpeningPage> {
 
   Widget _sheet() {
     final book = BookScope.of(context).current;
-    if (book == null) {
+    // Purpose: create mode has no current book and must still show the
+    // four steps. Rule: the no-book message is only for 開始開帳.
+    if (book == null && !widget.createMode) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -771,6 +941,22 @@ class _OpeningPageState extends State<OpeningPage> {
         '開帳日之後才可記一筆與看分析。',
         style: TextStyle(fontSize: 11, color: AppColors.secondary, height: 1.4),
       ),
+      if (widget.createMode) ...[
+        const SizedBox(height: 12),
+        // Purpose: frame 7 has no name field. A second book cannot reuse
+        // 「生活」 without a 409, so create mode collects the name here.
+        // Rule: empty text becomes 「生活」 on save.
+        TextField(
+          key: const Key('opening-book-name'),
+          controller: _bookName,
+          decoration: const InputDecoration(
+            labelText: '帳本名稱',
+            hintText: '生活',
+            border: OutlineInputBorder(),
+            isDense: true,
+          ),
+        ),
+      ],
     ];
   }
 
@@ -1271,6 +1457,39 @@ class _OpeningPageState extends State<OpeningPage> {
   }
 
   Widget _footer() {
+    if (_step == 3) {
+      return Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: _Cta(
+                  label: '略過',
+                  ghost: true,
+                  onTap: _busy ? null : _skipHoldings,
+                  buttonKey: const Key('opening-skip'),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _Cta(
+                  label: _busy ? '請稍候…' : '下一步',
+                  onTap: _busy ? null : _next,
+                  buttonKey: const Key('opening-next'),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            '沒有現倉可略過，直接進入預覽',
+            key: Key('opening-skip-hint'),
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 11, color: AppColors.secondary),
+          ),
+        ],
+      );
+    }
     if (_step < 4) {
       return _Cta(label: _busy ? '請稍候…' : '下一步', onTap: _busy ? null : _next, buttonKey: const Key('opening-next'));
     }

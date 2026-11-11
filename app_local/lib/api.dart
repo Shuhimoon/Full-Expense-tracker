@@ -40,6 +40,7 @@ abstract class ApiClient {
 
   Future<Book> unarchiveBook(String id);
 
+  /// Deletes [id] and all of its data. The current book is rejected.
   Future<void> deleteBook(String id);
 
   Future<Book> selectBook(String id);

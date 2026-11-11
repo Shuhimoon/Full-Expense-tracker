@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:full_jizhang/api.dart';
 import 'package:full_jizhang/format.dart';
 import 'package:full_jizhang/models/ledger.dart';
-import 'package:full_jizhang/session/book_create_nav.dart';
 import 'package:full_jizhang/session/books.dart';
 import 'package:full_jizhang/theme.dart';
 import 'package:full_jizhang/pages/record/record_sheet.dart';
@@ -25,11 +24,9 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  final _name = TextEditingController(text: '生活');
   String? _bookId;
   int _generation = -1;
   bool _loading = false;
-  bool _creating = false;
   String? _error;
   String? _quoteWarning;
   StatsSummary? _summary;
@@ -40,7 +37,6 @@ class _HomePageState extends State<HomePage> {
 
   @override
   void dispose() {
-    _name.dispose();
     super.dispose();
   }
 
@@ -125,37 +121,14 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  Future<void> _createBook() async {
-    if (_creating) return;
-    final books = BookScope.of(context);
-    // Purpose: the empty-state 建立帳本 finishes on 帳本, with this book
-    // current. Rule: origin is [BookCreateOrigin.firstRun], so the
-    // helper returns `/` and never 設定 or 開帳. Key logic: [hadBooks]
-    // is the row count before create(); an empty DB is false. The
-    // route is applied after create(), not on a timer. create() still
-    // selects the new book (existing behaviour).
-    final hadBooks = books.books.isNotEmpty;
-    setState(() {
-      _creating = true;
-      _error = null;
-    });
-    try {
-      await books.create(_name.text);
-      if (!mounted) return;
-      goBookCreateRoute(
-        context,
-        routeAfterBookCreate(
-          origin: BookCreateOrigin.firstRun,
-          hadBooks: hadBooks,
-        ),
-      );
-    } on ApiException catch (error) {
-      if (mounted) setState(() => _error = error.message);
-    } catch (_) {
-      if (mounted) setState(() => _error = '請求失敗');
-    } finally {
-      if (mounted) setState(() => _creating = false);
-    }
+  /// Empty-state 建立帳本 opens the opening wizard in create mode.
+  ///
+  /// Purpose: the first book is created on preview save, not here.
+  /// Rule: `from=first` is [BookCreateOrigin.firstRun], so save lands
+  /// on 帳本 `/`. Back/cancel leaves no book. The name is entered on
+  /// step 1 (default 「生活」).
+  void _startFirstBook() {
+    context.push('/opening?create=1&from=first');
   }
 
   Future<void> _switchBook() async {
@@ -224,11 +197,9 @@ class _HomePageState extends State<HomePage> {
       return KeyedSubtree(
         key: const Key('page-home'),
         child: _EmptyBooks(
-          controller: _name,
-          busy: _creating,
           error: _error ?? books.error,
           archived: books.books.any((book) => book.archived),
-          onCreate: _createBook,
+          onCreate: _startFirstBook,
         ),
       );
     }
@@ -512,15 +483,11 @@ class _LedgerRow {
 
 class _EmptyBooks extends StatelessWidget {
   const _EmptyBooks({
-    required this.controller,
-    required this.busy,
     required this.error,
     required this.archived,
     required this.onCreate,
   });
 
-  final TextEditingController controller;
-  final bool busy;
   final String? error;
   final bool archived;
   final VoidCallback onCreate;
@@ -537,16 +504,6 @@ class _EmptyBooks extends StatelessWidget {
           const SizedBox(height: 8),
           Text('建立一本，就可以記帳、看資產。', style: text.bodySmall),
           const SizedBox(height: 18),
-          TextField(
-            key: const Key('book-name-field'),
-            controller: controller,
-            decoration: const InputDecoration(
-              labelText: '帳本名稱',
-              hintText: '生活',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: 14),
           FilledButton(
             key: const Key('home-create-book'),
             style: FilledButton.styleFrom(
@@ -554,8 +511,8 @@ class _EmptyBooks extends StatelessWidget {
               foregroundColor: Colors.white,
               minimumSize: const Size.fromHeight(48),
             ),
-            onPressed: busy ? null : onCreate,
-            child: Text(busy ? '請稍候…' : '建立帳本'),
+            onPressed: onCreate,
+            child: const Text('建立帳本'),
           ),
           if (archived) ...[
             const SizedBox(height: 8),
