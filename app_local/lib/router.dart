@@ -68,7 +68,19 @@ GoRouter createRouter(
       ),
       GoRoute(
         path: '/opening',
-        builder: (context, state) => const OpeningPage(),
+        builder: (context, state) {
+          // Purpose: create=1 starts a new book at screen 7 and only
+          // inserts on preview save. Rule: `from` is the 10/27 origin
+          // (`settings`, `home`, `first`). Without create=1 this is
+          // still 開始開帳 for the current book.
+          final create = state.uri.queryParameters['create'] == '1';
+          return OpeningPage(
+            createMode: create,
+            origin: originFromBooksQuery(
+              state.uri.queryParameters['from'],
+            ),
+          );
+        },
       ),
       ShellRoute(
         navigatorKey: shellKey,

@@ -305,26 +305,45 @@ class LocalApi implements ApiClient {
   }
 
   @override
-  /// Deletes an empty book. Any account, live entry, or live trade forces
-  /// 409 「帳本還有帳戶或分錄，只能封存」 (`books.go` `handleBooksDelete`).
+  /// Deletes a book and every row that belongs to it.
+  ///
+  /// Purpose: 帳本管理 can remove a whole book, not only an empty one.
+  /// The old 409 「帳本還有帳戶或分錄，只能封存」 rule is replaced by a
+  /// cascade (frame 15: 帳本內的記錄會一併刪除).
+  ///
+  /// Rules:
+  /// - The current book (`last_book_id`) cannot be deleted. The user
+  ///   must switch first. Message: 「目前使用中的帳本無法刪除，需先切換到其他帳本。」
+  /// - All of the book's data is removed in one transaction.
+  ///
+  /// Key logic: children are deleted in an order that does not trip
+  /// account_id / instrument_id foreign keys. We do not rely only on
+  /// ON DELETE CASCADE, because PRAGMA foreign_keys may be off.
   Future<void> deleteBook(String id) async {
     await _loadBook(id);
-    final nAcc = await _count(
-      'SELECT COUNT(*) AS c FROM accounts WHERE book_id = ?',
-      [Variable.withString(id)],
-    );
-    final nEnt = await _count(
-      'SELECT COUNT(*) AS c FROM entries WHERE book_id = ? AND deleted_at IS NULL',
-      [Variable.withString(id)],
-    );
-    final nTr = await _count(
-      'SELECT COUNT(*) AS c FROM trades WHERE book_id = ? AND deleted_at IS NULL',
-      [Variable.withString(id)],
-    );
-    if (nAcc + nEnt + nTr > 0) {
-      throw ApiException('帳本還有帳戶或分錄，只能封存', status: 409);
+    final last = await lastBookId();
+    if (last == id) {
+      throw ApiException('目前使用中的帳本無法刪除，需先切換到其他帳本。', status: 409);
     }
-    await (db.delete(db.books)..where((b) => b.id.equals(id))).go();
+    await db.transaction(() async {
+      await db.customStatement(
+        'DELETE FROM quotes WHERE instrument_id IN (SELECT id FROM instruments WHERE book_id = ?)',
+        [id],
+      );
+      await (db.delete(db.openingPositionDrafts)..where((t) => t.bookId.equals(id))).go();
+      await (db.delete(db.openingCashDrafts)..where((t) => t.bookId.equals(id))).go();
+      await (db.delete(db.importKeys)..where((t) => t.bookId.equals(id))).go();
+      await (db.delete(db.merchantCategoryMaps)..where((t) => t.bookId.equals(id))).go();
+      await (db.delete(db.cardAccountMaps)..where((t) => t.bookId.equals(id))).go();
+      await (db.delete(db.fxRates)..where((t) => t.bookId.equals(id))).go();
+      await (db.delete(db.trades)..where((t) => t.bookId.equals(id))).go();
+      await (db.delete(db.positions)..where((t) => t.bookId.equals(id))).go();
+      await (db.delete(db.entries)..where((t) => t.bookId.equals(id))).go();
+      await (db.delete(db.instruments)..where((t) => t.bookId.equals(id))).go();
+      await (db.delete(db.categories)..where((t) => t.bookId.equals(id))).go();
+      await (db.delete(db.accounts)..where((t) => t.bookId.equals(id))).go();
+      await (db.delete(db.books)..where((t) => t.id.equals(id))).go();
+    });
   }
 
   Future<int> _count(String sql, List<Variable> args) async {

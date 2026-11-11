@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:full_jizhang/api.dart';
 import 'package:full_jizhang/lock.dart';
 import 'package:full_jizhang/pages/settings/password_form.dart';
 import 'package:full_jizhang/session/books.dart';
@@ -9,11 +8,14 @@ import 'package:go_router/go_router.dart';
 
 /// Settings for the on-device ledger.
 ///
-/// Book switching, opening, categories, and backup are the same jobs as the
-/// cloud app. The lock rows are local-only. 密碼鎖 stores a salted slow
-/// hash; Face ID is a shortcut that stays disabled until that password
-/// exists, and turning the password off turns Face ID off with it. There
-/// is no account and no logout.
+/// 帳本管理 is the entry for listing, adding, and deleting books
+/// (frame 6). Switching is done by tapping a book on that page, or from
+/// the 帳本 home switcher; there is no 切換帳本 row here. Opening,
+/// categories, and backup are the same jobs as the cloud app. The lock
+/// rows are local-only. 密碼鎖 stores a salted slow hash; Face ID is a
+/// shortcut that stays disabled until that password exists, and turning
+/// the password off turns Face ID off with it. There is no account and
+/// no logout.
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
 
@@ -24,69 +26,6 @@ class SettingsPage extends StatefulWidget {
 class _SettingsPageState extends State<SettingsPage> {
   String? _error;
   bool _busy = false;
-
-  Future<void> _switchBook() async {
-    final books = BookScope.of(context);
-    final id = await showModalBottomSheet<String>(
-      context: context,
-      backgroundColor: AppColors.sheet,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              for (final book in books.activeBooks)
-                ListTile(
-                  key: Key('settings-switch-${book.id}'),
-                  title: Text(book.name),
-                  trailing: book.id == books.current?.id
-                      ? const Icon(Icons.check_rounded, color: AppColors.sageDark)
-                      : null,
-                  onTap: () => Navigator.pop(context, book.id),
-                ),
-              if (books.activeBooks.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Text('沒有可切換的帳本'),
-                ),
-              // Purpose: 新增帳本 from the switcher reached on 設定.
-              // Rule: pop the sheet with a sentinel, then push 帳本管理
-              // with `from=settings`. That page passes the real
-              // pre-create book count. An existing book returns here;
-              // the first book goes to 帳本.
-              // Key logic: the sentinel is not a book id, so it is not
-              // passed to select().
-              ListTile(
-                key: const Key('settings-new-book'),
-                title: const Text('新增帳本'),
-                trailing: const Icon(Icons.add_rounded),
-                onTap: () => Navigator.pop(context, 'create'),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-    if (!mounted || id == null) return;
-    if (id == 'create') {
-      // Purpose: open the name form still tagged as a 設定 create.
-      // Rule: `from=settings` is the origin. The manage page passes the
-      // real pre-create count: an existing book returns to `/settings`,
-      // and no books yet goes to 帳本 `/`. Never 開帳.
-      // Key logic: the sheet is already popped.
-      context.push('/settings/books?from=settings');
-      return;
-    }
-    if (id == books.current?.id) return;
-    try {
-      await books.select(id);
-    } on ApiException catch (error) {
-      if (mounted) setState(() => _error = error.message);
-    }
-  }
 
   /// Turns 密碼鎖 on or off.
   ///
@@ -195,8 +134,6 @@ class _SettingsPageState extends State<SettingsPage> {
     final text = Theme.of(context).textTheme;
     final books = BookScope.of(context);
     final lock = LockScope.of(context);
-    final current = books.current?.name;
-    final names = books.activeBooks.map((book) => book.name).join(' · ');
     return PageScroll(
       // Purpose: mark the 設定 page itself, not 帳本管理 and not 帳本.
       // Rule: a finished 新增 from this tab must find this key again.
@@ -210,20 +147,13 @@ class _SettingsPageState extends State<SettingsPage> {
               rowKey: const Key('settings-books'),
               icon: Icons.menu_book_outlined,
               title: '帳本管理',
-              subtitle: current == null ? '尚未建立' : '目前：$current',
-              // Purpose: 帳本管理 opened from 設定. Rule: `from=settings`
-              // is the origin. The manage page passes the real pre-create
-              // count, so an existing book returns here and a first book
-              // goes to 帳本. 目前／the names refresh via BookScope.
-              // Key logic: the query is the origin.
+              // Purpose: this row is the only 設定 entry for books
+              // (frame 6). Rule: subtitle is always 「N 個帳本 · 新增／刪除」,
+              // including 0. Switching is not done here; tap a book on
+              // 帳本管理 or use the 帳本 home switcher.
+              // Key logic: `from=settings` is the origin for a later create.
+              subtitle: '${books.activeBooks.length} 個帳本 · 新增／刪除',
               onTap: () => context.push('/settings/books?from=settings'),
-            ),
-            _SettingsRow(
-              rowKey: const Key('settings-switch'),
-              icon: Icons.swap_horiz_rounded,
-              title: '切換帳本',
-              subtitle: names.isEmpty ? '尚未建立' : names,
-              onTap: _switchBook,
             ),
           ],
         ),

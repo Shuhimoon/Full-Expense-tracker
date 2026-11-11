@@ -9,8 +9,8 @@ import 'package:go_router/go_router.dart';
 /// when [BookController] notified its listeners.
 ///
 /// Rules:
-/// - [settings] is 設定, 帳本管理 opened from 設定, and the 切換帳本
-///   sheet opened on 設定 (the 新增帳本 row).
+/// - [settings] is 設定, and 帳本管理 opened from 設定 (the 帳本管理
+///   row, or ＋ 新增帳本 on that page).
 /// - [firstRun] is the 還沒有帳本 empty state on the 帳本 tab.
 /// - [homeManage] is 管理帳本 opened from the 帳本 switcher, or the
 ///   archived-books link on that empty state.
@@ -70,12 +70,14 @@ String? routeAfterBookCreate({
 ///
 /// Rules:
 /// - `home` → [BookCreateOrigin.homeManage].
+/// - `first` → [BookCreateOrigin.firstRun] (empty-state 建立帳本).
 /// - `settings`, a missing value, or anything else →
 ///   [BookCreateOrigin.settings], because this route is nested under 設定.
 ///
 /// Key logic: compare the raw query value, not the path and not the clock.
 BookCreateOrigin originFromBooksQuery(String? from) {
   if (from == 'home') return BookCreateOrigin.homeManage;
+  if (from == 'first') return BookCreateOrigin.firstRun;
   return BookCreateOrigin.settings;
 }
 
