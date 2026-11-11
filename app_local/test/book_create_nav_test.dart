@@ -17,11 +17,11 @@ import 'rules/harness.dart';
 // 新增帳本 landing page.
 //
 // Creating the very first book, when there are no books yet, finishes
-// on 帳本 `/` for every origin, including 設定. From 設定 (帳本管理, or
-// 新增帳本 on the 切換帳本 sheet) with a book already present, the app
-// returns to the 設定 page and keeps the new book current. The empty-state
-// 建立帳本 on an empty DB also finishes on 帳本 `/`. No path opens 開帳.
-// The choice is [routeAfterBookCreate], from the origin and the real
+// on 帳本 `/` for every origin, including 設定. From 設定 or 帳本管理
+// with a book already present, finishing the opening wizard returns to
+// the 設定 page and keeps the new book current. The empty-state 建立帳本
+// on an empty DB also finishes on 帳本 `/` after the wizard. The
+// landing page is [routeAfterBookCreate], from the origin and the real
 // book count taken before create, not from a delayed callback.
 
 void main() {
@@ -98,6 +98,7 @@ void main() {
   group('originFromBooksQuery', () {
     test('home is the 帳本 switcher; everything else is 設定', () {
       expect(originFromBooksQuery('home'), BookCreateOrigin.homeManage);
+      expect(originFromBooksQuery('first'), BookCreateOrigin.firstRun);
       expect(originFromBooksQuery('settings'), BookCreateOrigin.settings);
       expect(originFromBooksQuery(null), BookCreateOrigin.settings);
       expect(originFromBooksQuery(''), BookCreateOrigin.settings);
@@ -114,7 +115,7 @@ void main() {
       SharedPreferences.setMockInitialValues({});
     });
 
-    testWidgets('from 設定, 新增帳本 returns to 設定 with the new book current', (
+    testWidgets('from 設定, 帳本管理 ＋ 新增帳本 returns to 設定 with the new book current', (
       tester,
     ) async {
       final env = await _env(seedBook: true);
@@ -124,12 +125,9 @@ void main() {
       await tester.tap(find.byKey(const Key('nav-settings')));
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('page-settings')), findsOneWidget);
-      expect(find.textContaining('目前：生活'), findsOneWidget);
+      expect(find.text('1 個帳本 · 新增／刪除'), findsOneWidget);
 
-      // 切換帳本 on 設定 → 新增帳本 → the name form.
-      await tester.tap(find.byKey(const Key('settings-switch')));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const Key('settings-new-book')));
+      await tester.tap(find.byKey(const Key('settings-books')));
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('page-books')), findsOneWidget);
       expect(
@@ -139,15 +137,14 @@ void main() {
         '/settings/books',
       );
 
-      await tester.enterText(find.byKey(const Key('new-book-field')), '旅行');
-      await tester.tap(find.byKey(const Key('new-book-create')));
+      await tester.tap(find.byKey(const Key('books-add-appbar')));
       await tester.pumpAndSettle();
+      await _finishOpeningCreate(tester, name: '旅行');
 
-      _expectSettingsWithBook(tester, '旅行');
-      expect(find.textContaining('生活'), findsWidgets);
+      await _expectSettingsWithBook(tester, env, '旅行');
     });
 
-    testWidgets('from 設定, 帳本管理 新增 also returns to 設定', (tester) async {
+    testWidgets('from 設定, 帳本管理 新增帳本 button also returns to 設定', (tester) async {
       final env = await _env(seedBook: true);
       addTearDown(env.dispose);
       await _pump(tester, env);
@@ -158,11 +155,12 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('page-books')), findsOneWidget);
 
-      await tester.enterText(find.byKey(const Key('new-book-field')), '家庭');
-      await tester.tap(find.byKey(const Key('new-book-create')));
+      await tester.ensureVisible(find.byKey(const Key('books-add')));
+      await tester.tap(find.byKey(const Key('books-add')));
       await tester.pumpAndSettle();
+      await _finishOpeningCreate(tester, name: '家庭');
 
-      _expectSettingsWithBook(tester, '家庭');
+      await _expectSettingsWithBook(tester, env, '家庭');
     });
 
     testWidgets('empty DB first-book flow ends on 帳本 home', (tester) async {
@@ -181,6 +179,8 @@ void main() {
 
       await tester.tap(find.byKey(const Key('home-create-book')));
       await tester.pumpAndSettle();
+      expect(find.byKey(const Key('opening-title')), findsOneWidget);
+      await _finishOpeningCreate(tester);
 
       expect(find.byKey(const Key('page-home')), findsOneWidget);
       expect(find.byKey(const Key('book-switcher')), findsOneWidget);
@@ -202,15 +202,35 @@ void main() {
   });
 }
 
-void _expectSettingsWithBook(WidgetTester tester, String name) {
+/// Walks create-mode opening: name (optional) → date → balances → 略過 → save.
+Future<void> _finishOpeningCreate(WidgetTester tester, {String? name}) async {
+  expect(find.byKey(const Key('opening-title')), findsOneWidget);
+  expect(find.byKey(const Key('opening-book-name')), findsOneWidget);
+  if (name != null) {
+    await tester.enterText(find.byKey(const Key('opening-book-name')), name);
+  }
+  await tester.tap(find.byKey(const Key('opening-next')));
+  await tester.pumpAndSettle();
+  await tester.tap(find.byKey(const Key('opening-next')));
+  await tester.pumpAndSettle();
+  expect(find.byKey(const Key('opening-skip')), findsOneWidget);
+  await tester.tap(find.byKey(const Key('opening-skip')));
+  await tester.pumpAndSettle();
+  await tester.tap(find.byKey(const Key('opening-save')));
+  await tester.pumpAndSettle();
+}
+
+Future<void> _expectSettingsWithBook(
+  WidgetTester tester,
+  _Env env,
+  String name,
+) async {
   expect(find.byKey(const Key('page-settings')), findsOneWidget);
   expect(find.byKey(const Key('page-books')), findsNothing);
   expect(find.byKey(const Key('page-home')), findsNothing);
-  expect(find.byKey(const Key('new-book-field')), findsNothing);
   expect(find.byKey(const Key('opening-title')), findsNothing);
   expect(find.text('步驟 1／4 · 開帳'), findsNothing);
-  expect(find.textContaining('目前：$name'), findsOneWidget);
-  expect(find.textContaining(name), findsWidgets);
+  expect(find.text('2 個帳本 · 新增／刪除'), findsOneWidget);
   expect(
     GoRouterState.of(tester.element(find.byKey(const Key('page-settings'))))
         .uri
@@ -219,6 +239,9 @@ void _expectSettingsWithBook(WidgetTester tester, String name) {
   );
   final settings = tester.getSemantics(find.byKey(const Key('nav-settings')));
   expect(settings.flagsCollection.isSelected, Tristate.isTrue);
+  final last = await env.api.lastBookId();
+  final books = await env.api.listBooks();
+  expect(books.firstWhere((book) => book.id == last).name, name);
 }
 
 class _Env {
